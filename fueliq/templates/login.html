@@ -1,13 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head><title>FuelIQ - Login</title></head>
-<body style="font-family: sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc;">
-    <h2>FuelIQ Login</h2>
+{% extends "base.html" %}
+{% block title %}Log in — FuelIQ{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-box">
+    <div class="auth-logo">Fuel<em>IQ</em></div>
+    <p class="auth-sub">Sign in to your account</p>
     <form method="POST">
-        <p><label>Email:</label><br><input type="email" name="email" required style="width:100%"></p>
-        <p><label>Password:</label><br><input type="password" name="password" required style="width:100%"></p>
-        <button type="submit" style="width:100%; padding:10px; background:#28a745; color:white; border:none;">Login</button>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" required placeholder="you@example.com" autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-dark btn-full">Sign in</button>
     </form>
-    <p>New user? <a href="/register">Register here</a></p>
-</body>
-</html>
+    <p class="auth-footer">No account? <a href="{{ url_for('register') }}">Create one free</a></p>
+  </div>
+</div>
+{% endblock %}
