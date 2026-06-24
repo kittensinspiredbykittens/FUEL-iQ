@@ -77,8 +77,17 @@
       </form>
     </div>
 
-    <!-- Right: meals + AI -->
+    <!-- Right: AI + meals -->
     <div>
+      <div class="ai-card" style="margin-top: 0; margin-bottom: 1.25rem;">
+        <div class="ai-label">FuelIQ insight</div>
+        {% if feedback %}
+          <p class="ai-text">{{ feedback }}</p>
+        {% else %}
+          <p class="ai-empty">Log a meal to get a personalized nutrition insight for {{ athlete.name }}.</p>
+        {% endif %}
+      </div>
+
       <div class="card">
         <div class="card-title">Today's meals</div>
 
@@ -114,15 +123,6 @@
 
         {% else %}
           <div class="empty">Nothing logged yet today.<br>Add your first meal on the left.</div>
-        {% endif %}
-      </div>
-
-      <div class="ai-card">
-        <div class="ai-label">⚡ FuelIQ insight</div>
-        {% if feedback %}
-          <p class="ai-text">{{ feedback }}</p>
-        {% else %}
-          <p class="ai-empty">Log a meal to get a personalized nutrition insight for {{ athlete.name }}.</p>
         {% endif %}
       </div>
     </div>

@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from datetime import date
 from functools import wraps
@@ -246,7 +249,7 @@ Training today: {meal.training_context or 'not specified'}
 
 Write 2-3 sentences of warm, practical, parent-friendly nutrition feedback.
 Focus on how this meal fuels their sport. Give one simple actionable tip.
-No bullet points. No jargon. Plain encouraging language."""
+No bullet points. No jargon. No emojis. Plain encouraging language."""
 
         response = client.messages.create(
             model='claude-sonnet-4-6',
