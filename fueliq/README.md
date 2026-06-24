@@ -1,7 +1,8 @@
-# FuelIQ
-### AI-Powered Nutrition Tracking for Young Athletes
+# FUEL-iQ
 
-FuelIQ is a web application that helps parents fuel their young athletes properly. It is **not** a weight loss app. It connects what an athlete eats to how they are training — providing real-time, sport-aware meal feedback and an end-of-day AI-generated fueling summary.
+**AI-Powered Nutrition Tracking for Young Athletes**
+
+FuelIQ helps parents fuel their young athletes properly. It is not a weight loss app. It connects what an athlete eats to how they are training — providing real-time, sport-aware meal feedback powered by Claude AI.
 
 ---
 
@@ -10,97 +11,88 @@ FuelIQ is a web application that helps parents fuel their young athletes properl
 | Layer | Technology |
 |---|---|
 | Backend | Python / Flask |
-| Database | PostgreSQL |
+| Database | SQLite (local dev) |
 | Nutrition Data | USDA FoodData Central API |
 | AI Feedback | Anthropic Claude API |
-| Frontend | HTML, CSS, JavaScript |
-| Charts | Chart.js |
-| Email | Resend API |
-| Deployment | Railway |
-
----
-
-## Team & Ownership
-
-| Member | Responsibility |
-|---|---|
-| Member 1 | Backend architecture, database schema, user auth |
-| Member 2 | USDA API integration, food search, nutrient retrieval |
-| Member 3 | Claude API integration — meal feedback + daily summary prompt engineering |
-| Member 4 | Frontend UI, meal logging interface, training context inputs |
-| Member 5 | Dashboard, Chart.js analytics, presentation design |
+| Frontend | HTML / CSS |
 
 ---
 
 ## Getting Started
 
 ### 1. Clone the repo
+
 ```bash
-git clone https://github.com/your-org/fueliq.git
-cd fueliq
+git clone https://github.com/kittensinspiredbykittens/FUEL-iQ.git
+cd FUEL-iQ/fueliq
 ```
 
 ### 2. Create a virtual environment
+
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # Mac/Linux
-venv\Scripts\activate     # Windows
+source venv/bin/activate        # Mac/Linux
+venv\Scripts\activate           # Windows
 ```
 
 ### 3. Install dependencies
+
 ```bash
-pip install -r requirements.txt
+pip install flask flask-sqlalchemy werkzeug python-dotenv anthropic
 ```
 
-### 4. Set up environment variables
-```bash
-cp .env.example .env
-# Fill in your API keys in .env
+### 4. Add your Anthropic API key (optional for local testing)
+
+Create a file called `.env` inside the `fueliq` folder:
+
+```
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-You'll need:
-- **USDA API Key** — free at https://fdc.nal.usda.gov/api-guide.html (use `DEMO_KEY` for testing)
-- **Anthropic API Key** — https://console.anthropic.com
-- **DATABASE_URL** — PostgreSQL connection string (Railway recommended)
-- **FLASK_SECRET_KEY** — any random string
+AI feedback will silently skip if no key is present — everything else works without it.
 
 ### 5. Run the app
+
 ```bash
-python app.py
+python3 app.py
 ```
 
-Visit `http://localhost:5000`
+Visit **http://localhost:5000**
+
+The database (`fueliq.db`) is created automatically on first run. No setup needed.
 
 ---
 
-## Data Sources
+## Project Structure
 
-- **USDA FoodData Central** — 600,000+ foods, free REST API, no auth required for `DEMO_KEY`
-  - Docs: https://fdc.nal.usda.gov/api-guide.html
-- **AAP Guidelines** — Youth athlete caloric and macro needs by age group
-- **ACSM** — Sport-specific nutritional recommendations (used to calibrate AI prompts)
-
----
-
-## Project Timeline
-
-| Week | Milestone |
-|---|---|
-| 4 | User auth & athlete profile setup |
-| 5 | USDA food search integration |
-| 6 | Meal logging system |
-| 7 | AI meal-level feedback (Claude API) |
-| 8 | Daily summary intelligence |
-| 9 | Analytics dashboard |
-| 10 | Final testing & presentation |
+```
+FUEL-iQ/
+└── fueliq/
+    ├── app.py              # All routes, models, and AI logic
+    └── templates/
+        ├── base.html       # Shared layout and nav
+        ├── login.html
+        ├── register.html
+        ├── profile.html    # Athlete profile setup
+        ├── dashboard.html  # Meal logging + AI feedback
+        └── analytics.html
+```
 
 ---
 
 ## Key Principles
 
-- **Never ask for weight.** Guidance is based on age range, sport, and training load only.
+- **Never ask for weight.** Guidance is based on age, sport, and training load only.
 - **Not a diet app.** All AI output frames nutrition around fueling, energy, and recovery — never restriction.
 - **Parent-first language.** All feedback is written for parents, not clinicians.
+
+---
+
+## Data Sources
+
+- **USDA FoodData Central** — 600,000+ foods, free REST API
+- **AAP Guidelines** — Youth athlete caloric and macro needs by age group
+- **ACSM** — Sport-specific nutritional recommendations
 
 ---
 
@@ -110,4 +102,4 @@ Visit `http://localhost:5000`
 - `dev` — active development, merge PRs here first
 - `feature/your-name-feature` — individual feature branches
 
-Never push directly to `main`.
+Never push directly to main.
