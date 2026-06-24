@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelIQ — AI-Powered Youth Athlete Nutrition</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --black: #0f0f0f;
+            --green: #16a34a;
+            --green-light: #4ade80;
+            --green-bg: #f0fdf4;
+            --green-border: #bbf7d0;
+            --gray-50: #f7f7f5;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-400: #9ca3af;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fff;
+            color: var(--gray-800);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* ── Nav ── */
+        nav {
+            background: var(--black);
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .brand { font-size: 18px; font-weight: 800; color: #fff; text-decoration: none; letter-spacing: -0.4px; }
+        .brand em { color: var(--green-light); font-style: normal; }
+        .nav-cta {
+            background: var(--green);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 7px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .nav-cta:hover { background: #15803d; }
+
+        /* ── Hero ── */
+        .hero {
+            background: var(--black);
+            color: #fff;
+            padding: 5rem 2rem 4.5rem;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--green-light);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 5px 14px;
+            border-radius: 99px;
+            border: 1px solid rgba(74, 222, 128, 0.25);
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.25rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.15;
+            max-width: 720px;
+            margin: 0 auto 1.25rem;
+        }
+        .hero h1 em { color: var(--green-light); font-style: normal; }
+        .hero p {
+            font-size: 18px;
+            color: #aaa;
+            max-width: 520px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.7;
+        }
+        .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--green);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 13px 28px;
+            border-radius: 9px;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .btn-primary:hover { background: #15803d; }
+        .btn-secondary {
+            background: transparent;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            padding: 13px 28px;
+            border-radius: 9px;
+            text-decoration: none;
+            border: 1px solid #333;
+            transition: border-color 0.15s;
+        }
+        .btn-secondary:hover { border-color: #666; }
+
+        /* ── Section wrapper ── */
+        .section { padding: 5rem 2rem; }
+        .section-inner { max-width: 900px; margin: 0 auto; }
+        .section-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.75rem;
+        }
+        .section-title {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.75rem;
+        }
+        .section-sub {
+            font-size: 16px;
+            color: var(--gray-600);
+            max-width: 540px;
+            margin-bottom: 3rem;
+        }
+
+        /* ── Problem section ── */
+        .problem { background: var(--gray-50); }
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+        }
+        .problem-card {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .problem-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 0.4rem; }
+        .problem-card p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+
+        /* ── How it works ── */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            counter-reset: steps;
+        }
+        .step { position: relative; }
+        .step-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+        }
+        .step h3 { font-size: 16px; font-weight: 600; margin-bottom: 0.4rem; }
+        .step p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+
+        /* ── Features ── */
+        .features-bg { background: var(--black); color: #fff; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+        }
+        .feature-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .feature-card .tag {
+            display: inline-block;
+            background: rgba(74,222,128,0.12);
+            color: var(--green-light);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .feature-card h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 0.4rem; }
+        .feature-card p { font-size: 14px; color: #888; line-height: 1.6; }
+        .features-bg .section-title { color: #fff; }
+        .features-bg .section-sub { color: #888; }
+
+        /* ── Principles ── */
+        .principles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+        }
+        .principle {
+            border-left: 3px solid var(--green);
+            padding: 0.25rem 0 0.25rem 1.25rem;
+        }
+        .principle h3 { font-size: 15px; font-weight: 600; margin-bottom: 0.3rem; }
+        .principle p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+
+        /* ── CTA ── */
+        .cta-section {
+            background: var(--green);
+            color: #fff;
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+        .cta-section h2 {
+            font-size: clamp(1.5rem, 3vw, 2.25rem);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.75rem;
+        }
+        .cta-section p { font-size: 17px; color: rgba(255,255,255,0.8); margin-bottom: 2rem; }
+        .btn-white {
+            background: #fff;
+            color: var(--green);
+            font-size: 15px;
+            font-weight: 700;
+            padding: 13px 32px;
+            border-radius: 9px;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.15s;
+        }
+        .btn-white:hover { opacity: 0.9; }
+
+        /* ── Footer ── */
+        footer {
+            background: var(--black);
+            color: #555;
+            text-align: center;
+            padding: 2rem;
+            font-size: 13px;
+        }
+        footer em { color: var(--green-light); font-style: normal; }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+    <a href="/" class="brand">Fuel<em>IQ</em></a>
+    <a href="/register" class="nav-cta">Get started free</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">AI-Powered Youth Athlete Nutrition</div>
+    <h1>Fuel Athletes <em>Smarter.</em></h1>
+    <p>FuelIQ helps parents make sure their youth athletes are getting the nutrients they need to grow and develop.</p>
+    <div class="hero-btns">
+        <a href="/register" class="btn-primary">Get started free →</a>
+        <a href="/login" class="btn-secondary">Sign in</a>
+    </div>
+</section>
+
+<!-- Problem -->
+<section class="section problem">
+    <div class="section-inner">
+        <div class="section-label">The problem</div>
+        <h2 class="section-title">Most nutrition apps weren't built for young athletes</h2>
+        <p class="section-sub">Generic calorie counters miss the context that actually matters for youth sport performance.</p>
+        <div class="problem-grid">
+            <div class="problem-card">
+                <h3>No sport context</h3>
+                <p>A meal before a rest day hits differently than before a tournament. Generic apps don't know the difference.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Weight-obsessed</h3>
+                <p>Most apps focus on calories in vs. calories out. Young athletes need fuel, recovery, and energy — not restriction.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Parents left out</h3>
+                <p>Nutrition decisions for youth athletes happen at home. Parents need guidance they can actually understand and act on.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How it works -->
+<section class="section">
+    <div class="section-inner">
+        <div class="section-label">How it works</div>
+        <h2 class="section-title">Simple for parents. Smart for athletes.</h2>
+        <p class="section-sub">Three steps to personalized nutrition guidance for your young athlete.</p>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">Step 01</div>
+                <h3>Set up an athlete profile</h3>
+                <p>Enter your athlete's age, sport, and training schedule. No weight required — ever.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">Step 02</div>
+                <h3>Log their meals</h3>
+                <p>Quickly log what they ate and what training looks like today. Takes under a minute.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">Step 03</div>
+                <h3>Get AI-powered insight</h3>
+                <p>FuelIQ generates plain-language feedback connecting the meal to their sport and training load.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="section features-bg">
+    <div class="section-inner">
+        <div class="section-label" style="color: var(--green-light);">What's inside</div>
+        <h2 class="section-title">Built for the way youth athletes actually eat</h2>
+        <p class="section-sub">Every feature designed with young athletes and their parents in mind.</p>
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="tag">AI</span>
+                <h3>Real-time meal feedback</h3>
+                <p>Claude AI generates sport-aware, parent-friendly nutrition insights every time a meal is logged.</p>
+            </div>
+            <div class="feature-card">
+                <span class="tag">Tracking</span>
+                <h3>Training context logging</h3>
+                <p>Log what kind of training day it is alongside meals — so the feedback actually makes sense.</p>
+            </div>
+            <div class="feature-card">
+                <span class="tag">Multi-athlete</span>
+                <h3>Multiple athlete profiles</h3>
+                <p>One account for your whole family. Each athlete gets their own sport-specific guidance.</p>
+            </div>
+            <div class="feature-card">
+                <span class="tag">Data</span>
+                <h3>USDA food database</h3>
+                <p>600,000+ foods with accurate nutrition data. Look up by name or USDA FDC ID.</p>
+            </div>
+            <div class="feature-card">
+                <span class="tag">Analytics</span>
+                <h3>Nutrition trends</h3>
+                <p>See how your athlete's fueling patterns shift across training weeks and competition seasons.</p>
+            </div>
+            <div class="feature-card">
+                <span class="tag">Language</span>
+                <h3>Parent-first language</h3>
+                <p>No clinical jargon. Every insight is written for parents who want to help — not dietitians.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Principles -->
+<section class="section">
+    <div class="section-inner">
+        <div class="section-label">Our principles</div>
+        <h2 class="section-title">What we believe about youth nutrition</h2>
+        <p class="section-sub">These aren't just features — they're commitments baked into every part of FuelIQ.</p>
+        <div class="principles-grid">
+            <div class="principle">
+                <h3>Never ask for weight</h3>
+                <p>Guidance is based on age, sport, and training load only. Body weight has no place in youth athlete nutrition tracking.</p>
+            </div>
+            <div class="principle">
+                <h3>Fuel, not restriction</h3>
+                <p>All AI output frames nutrition around energy, performance, and recovery — never calories to cut or foods to avoid.</p>
+            </div>
+            <div class="principle">
+                <h3>Parents as partners</h3>
+                <p>Youth athletes need the adults in their lives on their side. FuelIQ puts parents in the loop with language they can use.</p>
+            </div>
+            <div class="principle">
+                <h3>Sport-specific by default</h3>
+                <p>A swimmer and a soccer player have different needs. FuelIQ knows the difference and adjusts accordingly.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <h2>Ready to fuel your athlete right?</h2>
+    <p>Create a free account and log your first meal in under two minutes.</p>
+    <a href="/register" class="btn-white">Get started free →</a>
+</section>
+
+<!-- Footer -->
+<footer>
+    <p>© 2025 Fuel<em>IQ</em> — AI-powered youth athlete nutrition.</p>
+</footer>
+
+</body>
+</html>

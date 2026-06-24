@@ -63,7 +63,7 @@ def login_required(f):
 def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return render_template('landing.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
