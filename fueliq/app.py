@@ -6,55 +6,49 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-
-# ── Config ────────────────────────────────────────────────────────────────────
 app.config['SECRET_KEY'] = 'fueliq-dev-secret-2025'
-# SQLite: creates a file called fueliq.db right next to app.py — no setup needed
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fueliq.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-
 # ── Models ────────────────────────────────────────────────────────────────────
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    athletes = db.relationship('Athlete', backref='user', lazy=True, cascade='all, delete-orphan')
 
+class User(db.Model):
+    id            = db.Column(db.Integer, primary_key=True)
+    email         = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    athletes      = db.relationship('Athlete', backref='user', lazy=True, cascade='all, delete-orphan')
 
 class Athlete(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    age = db.Column(db.Integer)
-    sport = db.Column(db.String(100))
+    id                = db.Column(db.Integer, primary_key=True)
+    user_id           = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name              = db.Column(db.String(100), nullable=False)
+    age               = db.Column(db.Integer)
+    sport             = db.Column(db.String(100))
     training_schedule = db.Column(db.String(255))
-    dietary_notes = db.Column(db.Text)
-    meals = db.relationship('Meal', backref='athlete', lazy=True, cascade='all, delete-orphan')
-
+    dietary_notes     = db.Column(db.Text)
+    meals             = db.relationship('Meal', backref='athlete', lazy=True, cascade='all, delete-orphan')
 
 class Meal(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    athlete_id = db.Column(db.Integer, db.ForeignKey('athlete.id'), nullable=False)
-    food_name = db.Column(db.String(255), nullable=False)
-    meal_time = db.Column(db.String(20))
-    portion_size = db.Column(db.Float, default=1.0)
+    id               = db.Column(db.Integer, primary_key=True)
+    athlete_id       = db.Column(db.Integer, db.ForeignKey('athlete.id'), nullable=False)
+    food_name        = db.Column(db.String(255), nullable=False)
+    meal_time        = db.Column(db.String(20))
+    portion_size     = db.Column(db.Float, default=1.0)
     training_context = db.Column(db.String(255))
-    calories = db.Column(db.Float)
-    protein_g = db.Column(db.Float)
-    carbs_g = db.Column(db.Float)
-    fat_g = db.Column(db.Float)
-    ai_feedback = db.Column(db.Text)
-    logged_date = db.Column(db.String(20))
-
+    calories         = db.Column(db.Float)
+    protein_g        = db.Column(db.Float)
+    carbs_g          = db.Column(db.Float)
+    fat_g            = db.Column(db.Float)
+    ai_feedback      = db.Column(db.Text)
+    logged_date      = db.Column(db.String(20))
 
 with app.app_context():
     db.create_all()
 
-
 # ── Auth helper ───────────────────────────────────────────────────────────────
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -63,8 +57,8 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 # ── Routes ────────────────────────────────────────────────────────────────────
+
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -75,7 +69,7 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
         if not email or not password:
@@ -101,9 +95,9 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
+        email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        user = User.query.filter_by(email=email).first()
+        user     = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
@@ -125,23 +119,23 @@ def logout():
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    user = User.query.get(session['user_id'])
+    user    = User.query.get(session['user_id'])
     athlete = Athlete.query.get(session['athlete_id']) if session.get('athlete_id') else None
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
-        age = request.form.get('age', '').strip()
+        age  = request.form.get('age', '').strip()
 
         if not name:
             flash('Athlete name is required.', 'danger')
             return render_template('profile.html', athlete=athlete)
 
         if athlete:
-            athlete.name = name
-            athlete.age = int(age) if age else None
-            athlete.sport = request.form.get('sport', '').strip()
+            athlete.name              = name
+            athlete.age               = int(age) if age else None
+            athlete.sport             = request.form.get('sport', '').strip()
             athlete.training_schedule = request.form.get('training_schedule', '').strip()
-            athlete.dietary_notes = request.form.get('dietary_notes', '').strip()
+            athlete.dietary_notes     = request.form.get('dietary_notes', '').strip()
         else:
             athlete = Athlete(
                 user_id=user.id,
@@ -164,7 +158,6 @@ def profile():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user = User.query.get(session['user_id'])
     athlete = Athlete.query.get(session['athlete_id']) if session.get('athlete_id') else None
 
     if not athlete:
@@ -184,7 +177,7 @@ def dashboard():
         athlete=athlete,
         meals=meals,
         feedback=feedback,
-        today=date.today().strftime('%A, %B %-d')
+        today=date.today().strftime('%B %-d, %Y')
     )
 
 
@@ -216,7 +209,6 @@ def log_meal():
     db.session.add(meal)
     db.session.commit()
 
-    # Generate AI feedback
     meal.ai_feedback = generate_ai_feedback(athlete, meal)
     db.session.commit()
 
@@ -234,6 +226,7 @@ def analytics():
 
 
 # ── AI feedback ───────────────────────────────────────────────────────────────
+
 def generate_ai_feedback(athlete, meal):
     try:
         import anthropic
@@ -248,11 +241,11 @@ Athlete: {athlete.name}, age {athlete.age}, sport: {athlete.sport or 'not specif
 Training load: {athlete.training_schedule or 'not specified'}
 Dietary notes: {athlete.dietary_notes or 'none'}
 
-Meal logged: {meal.food_name} ({meal.portion_size} serving) at {meal.meal_time}
-Training context today: {meal.training_context or 'not specified'}
+Meal logged: {meal.food_name} x{meal.portion_size} at {meal.meal_time}
+Training today: {meal.training_context or 'not specified'}
 
-Write 2-3 sentences of warm, practical, parent-friendly nutrition feedback for this meal.
-Consider how it fuels their sport and training. Give one simple actionable tip.
+Write 2-3 sentences of warm, practical, parent-friendly nutrition feedback.
+Focus on how this meal fuels their sport. Give one simple actionable tip.
 No bullet points. No jargon. Plain encouraging language."""
 
         response = client.messages.create(
