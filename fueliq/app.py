@@ -2,24 +2,6 @@
 FuelIQ — AI-Powered Nutrition Tracking for Young Athletes
 ==========================================================
 Stack: Python / Flask / PostgreSQL / USDA FoodData Central API / Anthropic Claude API
-Team:  5 members (see README for ownership breakdown)
-
-Routes
-------
-GET  /                  → Landing / login redirect
-GET  /register          → Registration page
-POST /register          → Create account
-GET  /login             → Login page
-POST /login             → Authenticate
-GET  /logout            → Log out
-GET  /dashboard         → Athlete dashboard (requires login)
-GET  /profile           → Athlete profile setup
-POST /profile           → Save profile
-GET  /food/search       → USDA food search (JSON)
-POST /meal/log          → Log a meal entry
-GET  /meal/feedback     → AI meal-level feedback (JSON)
-GET  /summary/daily     → AI daily summary (JSON)
-GET  /analytics         → Analytics dashboard
 """
 
 import os
@@ -34,6 +16,7 @@ import psycopg2.extras
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, jsonify, g)
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -183,10 +166,15 @@ def extract_key_nutrients(food_data):
         1087: "calcium_mg",
     }
     result = {v: 0 for v in nutrient_map.values()}
-    for n in food_data.get("foodNutrients", []):
+    
+    # Handle different structures between Search endpoints vs Specific Food endpoints
+    nutrients_list = food_data.get("foodNutrients", [])
+    for n in nutrients_list:
         nid = n.get("nutrient", {}).get("id") or n.get("nutrientId")
         if nid in nutrient_map:
-            result[nutrient_map[nid]] = round(n.get("amount", 0), 2)
+            # Fallback keys for different API layouts
+            amount = n.get("amount") if n.get("amount") is not None else n.get("value", 0)
+            result[nutrient_map[nid]] = round(float(amount), 2)
     return result
 
 
@@ -228,7 +216,7 @@ Meal logged:
 Does this meal support their training and recovery? Give brief, parent-friendly feedback."""
 
     message = claude.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=300,
         system=MEAL_FEEDBACK_SYSTEM,
         messages=[{"role": "user", "content": prompt}]
@@ -270,7 +258,7 @@ Today's nutrition totals:
 Generate a daily fueling summary for the parent."""
 
     message = claude.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=400,
         system=DAILY_SUMMARY_SYSTEM,
         messages=[{"role": "user", "content": prompt}]
@@ -290,13 +278,53 @@ def index():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    # TODO: Member 1 — implement registration form and password hashing
-    return "Register page — coming soon"
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        family_name = request.form.get("family_name")
+        
+        if not email or not password:
+            return "Email and Password required", 400
+            
+        hashed_pw = generate_password_hash(password)
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO users (email, password_hash, family_name) VALUES (%s, %s, %s) RETURNING id",
+                (email, hashed_pw, family_name)
+            )
+            user_id = cur.fetchone()["id"]
+            conn.commit()
+            session["user_id"] = user_id
+            return redirect(url_for("profile"))
+        except psycopg2.IntegrityError:
+            conn.rollback()
+            return "Email already registered", 400
+        finally:
+            cur.close()
+            
+    return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # TODO: Member 1 — implement login form and session management
-    return "Login page — coming soon"
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        cur.close()
+        
+        if user and check_password_hash(user["password_hash"], password):
+            session["user_id"] = user["id"]
+            return redirect(url_for("dashboard"))
+        
+        return "Invalid credentials", 401
+        
+    return render_template("login.html")
 
 @app.route("/logout")
 def logout():
@@ -311,8 +339,28 @@ def logout():
 @app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
-    # TODO: Member 1 — athlete profile setup (name, age, sport, training schedule, dietary notes)
-    return "Profile page — coming soon"
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if request.method == "POST":
+        name = request.form.get("name")
+        age = int(request.form.get("age", 0))
+        sport = request.form.get("sport")
+        training_schedule = request.form.get("training_schedule")
+        dietary_notes = request.form.get("dietary_notes")
+        
+        cur.execute("""
+            INSERT INTO athletes (user_id, name, age, sport, training_schedule, dietary_notes)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (current_user_id(), name, age, sport, training_schedule, dietary_notes))
+        conn.commit()
+        cur.close()
+        return redirect(url_for("dashboard"))
+        
+    cur.execute("SELECT * FROM athletes WHERE user_id = %s", (current_user_id(),))
+    athletes = cur.fetchall()
+    cur.close()
+    return render_template("profile.html", athletes=athletes)
 
 
 # ---------------------------------------------------------------------------
@@ -322,8 +370,44 @@ def profile():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # TODO: Member 4 — main dashboard showing today's meals, AI feedback, and quick log button
-    return "Dashboard — coming soon"
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Get all athletes managed by this parent account
+    cur.execute("SELECT * FROM athletes WHERE user_id = %s", (current_user_id(),))
+    athletes = cur.fetchall()
+    
+    if not athletes:
+        cur.close()
+        return redirect(url_for("profile"))
+        
+    # Default to the first athlete profile found for simplicity
+    selected_athlete = athletes[0]
+    
+    # Fetch today's logged items
+    cur.execute("""
+        SELECT * FROM meal_logs 
+        WHERE athlete_id = %s AND logged_date = CURRENT_DATE
+        ORDER BY logged_at DESC
+    """, (selected_athlete["id"],))
+    today_meals = cur.fetchall()
+    
+    # Fetch latest meal-level feedback
+    cur.execute("""
+        SELECT feedback_text FROM ai_feedback 
+        WHERE athlete_id = %s AND feedback_type = 'meal' AND logged_date = CURRENT_DATE
+        ORDER BY created_at DESC LIMIT 1
+    """, (selected_athlete["id"],))
+    latest_feedback = cur.fetchone()
+    
+    cur.close()
+    return render_template(
+        "dashboard.html", 
+        athlete=selected_athlete, 
+        athletes=athletes, 
+        meals=today_meals,
+        feedback=latest_feedback["feedback_text"] if latest_feedback else None
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -361,14 +445,80 @@ def food_search():
 @app.route("/meal/log", methods=["POST"])
 @login_required
 def log_meal():
-    # TODO: Member 4 — save meal log entry to DB, trigger AI feedback
-    return jsonify({"status": "coming soon"})
+    athlete_id = request.form.get("athlete_id")
+    fdc_id = request.form.get("fdc_id")
+    food_name = request.form.get("food_name")
+    portion_size = float(request.form.get("portion_size", 1))
+    portion_unit = request.form.get("portion_unit", "serving")
+    meal_time = request.form.get("meal_time", "Breakfast")
+    training_context = request.form.get("training_context", "None")
+
+    if not athlete_id or not food_name:
+        return jsonify({"error": "Missing parameters"}), 400
+
+    # Fetch nutrients from USDA if fdc_id is provided
+    nutrients = {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "iron_mg": 0, "calcium_mg": 0}
+    if fdc_id:
+        try:
+            raw_data = get_usda_nutrients(fdc_id)
+            extracted = extract_key_nutrients(raw_data)
+            # Scale nutrients by portion input
+            for key in nutrients:
+                nutrients[key] = extracted.get(key, 0) * portion_size
+        except Exception as e:
+            print(f"Error fetching USDA nutrients: {e}")
+
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Save log entry
+    cur.execute("""
+        INSERT INTO meal_logs (
+            athlete_id, food_name, usda_fdc_id, portion_size, portion_unit, meal_time, training_context,
+            calories, protein_g, carbs_g, fat_g, fiber_g, iron_mg, calcium_mg
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+    """, (
+        athlete_id, food_name, fdc_id, portion_size, portion_unit, meal_time, training_context,
+        nutrients["calories"], nutrients["protein_g"], nutrients["carbs_g"], nutrients["fat_g"],
+        nutrients["fiber_g"], nutrients["iron_mg"], nutrients["calcium_mg"]
+    ))
+    
+    # Get Athlete Profile Data for Claude
+    cur.execute("SELECT * FROM athletes WHERE id = %s", (athlete_id,))
+    athlete = cur.fetchone()
+    
+    # Build list of today's meal items to give context to Claude
+    cur.execute("SELECT * FROM meal_logs WHERE athlete_id = %s AND logged_date = CURRENT_DATE", (athlete_id,))
+    todays_items = cur.fetchall()
+    
+    # Generate Meal Feedback asynchronously/synchronously for the MVP
+    feedback_text = get_meal_feedback(athlete, todays_items, training_context)
+    
+    # Save the AI response
+    cur.execute("""
+        INSERT INTO ai_feedback (athlete_id, feedback_type, feedback_text)
+        VALUES (%s, 'meal', %s)
+    """, (athlete_id, feedback_text))
+    
+    conn.commit()
+    cur.close()
+    
+    return redirect(url_for("dashboard"))
 
 @app.route("/meal/feedback")
 @login_required
 def meal_feedback():
-    # TODO: Member 3 — retrieve or generate AI meal feedback for athlete + date
-    return jsonify({"feedback": "coming soon"})
+    athlete_id = request.args.get("athlete_id")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT feedback_text FROM ai_feedback 
+        WHERE athlete_id = %s AND feedback_type = 'meal'
+        ORDER BY created_at DESC LIMIT 1
+    """, (athlete_id,))
+    row = cur.fetchone()
+    cur.close()
+    return jsonify({"feedback": row["feedback_text"] if row else "No feedback yet."})
 
 
 # ---------------------------------------------------------------------------
@@ -378,8 +528,52 @@ def meal_feedback():
 @app.route("/summary/daily")
 @login_required
 def daily_summary():
-    # TODO: Member 3 — generate and return AI daily summary for athlete + date
-    return jsonify({"summary": "coming soon"})
+    athlete_id = request.args.get("athlete_id")
+    if not athlete_id:
+        return jsonify({"error": "Missing athlete_id"}), 400
+        
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Check if we already computed a summary for today
+    cur.execute("""
+        SELECT feedback_text FROM ai_feedback 
+        WHERE athlete_id = %s AND feedback_type = 'daily' AND logged_date = CURRENT_DATE
+        ORDER BY created_at DESC LIMIT 1
+    """, (athlete_id,))
+    existing = cur.fetchone()
+    
+    if existing:
+        cur.close()
+        return jsonify({"summary": existing["feedback_text"]})
+        
+    # If not, generate total calculations
+    cur.execute("SELECT * FROM athletes WHERE id = %s", (athlete_id,))
+    athlete = cur.fetchone()
+    
+    cur.execute("""
+        SELECT 
+            COALESCE(SUM(calories), 0) as calories,
+            COALESCE(SUM(protein_g), 0) as protein_g,
+            COALESCE(SUM(carbs_g), 0) as carbs_g,
+            COALESCE(SUM(fat_g), 0) as fat_g,
+            COALESCE(SUM(iron_mg), 0) as iron_mg,
+            COALESCE(SUM(calcium_mg), 0) as calcium_mg,
+            MAX(training_context) as training_context
+        FROM meal_logs WHERE athlete_id = %s AND logged_date = CURRENT_DATE
+    """, (athlete_id,))
+    totals = cur.fetchone()
+    
+    summary_text = get_daily_summary(athlete, totals, totals.get("training_context") or "None")
+    
+    cur.execute("""
+        INSERT INTO ai_feedback (athlete_id, feedback_type, feedback_text)
+        VALUES (%s, 'daily', %s)
+    """, (athlete_id, summary_text))
+    
+    conn.commit()
+    cur.close()
+    return jsonify({"summary": summary_text})
 
 
 # ---------------------------------------------------------------------------
@@ -389,8 +583,32 @@ def daily_summary():
 @app.route("/analytics")
 @login_required
 def analytics():
-    # TODO: Member 5 — analytics dashboard with Chart.js macro trends and training load alignment
-    return "Analytics — coming soon"
+    athlete_id = request.args.get("athlete_id")
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if not athlete_id:
+        cur.execute("SELECT id FROM athletes WHERE user_id = %s LIMIT 1", (current_user_id(),))
+        res = cur.fetchone()
+        if not res:
+            cur.close()
+            return redirect(url_for("profile"))
+        athlete_id = res["id"]
+        
+    # Gather historical baseline metrics from the past 7 days
+    cur.execute("""
+        SELECT logged_date, 
+               SUM(calories) as cals, SUM(protein_g) as prot, 
+               SUM(carbs_g) as carbs, SUM(fat_g) as fat
+        FROM meal_logs 
+        WHERE athlete_id = %s 
+        GROUP BY logged_date 
+        ORDER BY logged_date ASC LIMIT 7
+    """, (athlete_id,))
+    history = cur.fetchall()
+    cur.close()
+    
+    return render_template("analytics.html", history=history)
 
 
 # ---------------------------------------------------------------------------
