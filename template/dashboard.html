@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>FuelIQ Dashboard</title></head>
+<body style="font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+        <h1>FuelIQ Dashboard ⚡</h1>
+        <div>
+            <strong>Athlete:</strong> {{ athlete.name }} (Age {{ athlete.age }}) | <a href="/analytics">View Analytics</a> | <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px;">
+        <!-- Left Side: Log Entry -->
+        <div>
+            <h3>Quick Meal Logger</h3>
+            <form action="/meal/log" method="POST" style="background: #f9f9f9; padding: 15px; border-radius: 5px;">
+                <input type="hidden" name="athlete_id" value="{{ athlete.id }}">
+                
+                <p><label>Food Item Name:</label><br><input type="text" name="food_name" required placeholder="e.g. Grilled Chicken Salad" style="width:100%"></p>
+                <p><label>USDA FDC ID (Optional for custom logs):</label><br><input type="text" name="fdc_id" placeholder="e.g. 171353" style="width:100%"></p>
+                <p><label>Portion Scaler / Servings:</label><br><input type="number" step="0.1" name="portion_size" value="1.0" style="width:100%"></p>
+                
+                <p><label>Meal Time Window:</label><br>
+                    <select name="meal_time" style="width:100%">
+                        <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
+                    </select>
+                </p>
+                <p><label>Training Context today:</label><br><input type="text" name="training_context" placeholder="e.g. High intensity sprinting practice" style="width:100%"></p>
+                
+                <button type="submit" style="padding:10px; background:#28a745; color:white; border:none; width:100%">Log & Generate Feedback</button>
+            </form>
+        </div>
+
+        <!-- Right Side: Analytics Feedback -->
+        <div>
+            <h3>Today's Logged Items</h3>
+            {% if meals %}
+                <ul>
+                {% for meal in meals %}
+                    <li><strong>{{ meal.meal_time }}:</strong> {{ meal.food_name }} ({{ meal.calories }} kCal, {{ meal.protein_g }}g P, {{ meal.carbs_g }}g C)</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color:#777;">No foods logged today yet.</p>
+            {% endif %}
+
+            <div style="margin-top: 30px; padding: 15px; background: #e9ecef; border-left: 5px solid #007bff; border-radius: 4px;">
+                <h4>🤖 AI Real-time Training Feedback</h4>
+                <p>{{ feedback or "Log a meal item above to see your customized parent summary insight from Claude." }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
