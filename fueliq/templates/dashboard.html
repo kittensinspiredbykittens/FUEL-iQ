@@ -1,132 +1,378 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — FuelIQ{% endblock %}
+{% block title %}Parent Dashboard — FuelIQ{% endblock %}
+
 {% block styles %}
-.dash-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; }
-.dash-top h1 { font-size: 21px; font-weight: 700; }
-.dash-top .date { font-size: 13px; color: #999; margin-top: 2px; }
-.pill { background: #dcfce7; color: #166534; font-size: 13px; font-weight: 600; padding: 5px 14px; border-radius: 99px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+.dashboard-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.5rem; }
+.eyebrow { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 7px; }
+.dashboard-hero h1 { max-width: 700px; font-size: clamp(26px, 4vw, 40px); line-height: 1.12; letter-spacing: -1.5px; }
+.hero-sub { color: var(--muted); font-size: 14px; margin-top: 9px; }
+.athlete-card { min-width: 190px; padding: 14px 16px; border: 1px solid rgba(121,255,80,.25); border-radius: 16px; background: rgba(121,255,80,.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), var(--glow); }
+.athlete-card strong { display: block; font-size: 15px; }
+.athlete-card span { color: #a8b7aa; font-size: 12px; }
 
-/* Macros */
-.macros { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 1.25rem; }
-.macro { background: #f7f7f5; border: 1px solid #efefed; border-radius: 8px; padding: 0.75rem; text-align: center; }
-.macro .val { font-size: 20px; font-weight: 700; }
-.macro .lbl { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
+.snapshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+.snapshot { position: relative; overflow: hidden; background: linear-gradient(145deg, #171e18, #101511); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: 0 14px 34px rgba(0,0,0,.24); }
+.snapshot::after { content: ""; position: absolute; width: 72px; height: 72px; right: -20px; top: -26px; border-radius: 50%; background: var(--tint, #79ff50); opacity: .16; filter: saturate(2); box-shadow: 0 0 28px var(--tint, #79ff50); }
+.snapshot-label { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.snapshot-value { font-size: 25px; font-weight: 820; letter-spacing: -.7px; margin-top: 3px; }
+.snapshot-detail { color: #8e9b90; font-size: 11px; margin-top: 1px; }
 
-/* Meal list */
-.meal-list { list-style: none; }
-.meal-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #f3f3f3; font-size: 14px; }
-.meal-row:last-child { border-bottom: none; }
-.meal-tag { font-size: 11px; font-weight: 600; background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 99px; margin-right: 8px; }
-.meal-name { font-weight: 500; }
-.meal-cal { font-size: 13px; color: #aaa; }
-.empty { text-align: center; padding: 2rem 0; color: #bbb; font-size: 14px; line-height: 1.9; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(320px, .82fr) minmax(500px, 1.38fr); gap: 1.25rem; align-items: start; }
+.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+.panel-heading h2 { font-size: 18px; letter-spacing: -.35px; }
+.panel-heading p { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.soft-badge { display: inline-flex; white-space: nowrap; align-items: center; gap: 6px; border: 1px solid rgba(121,255,80,.16); border-radius: 99px; padding: 6px 10px; color: #baffaa; background: var(--green-soft); font-size: 11px; font-weight: 750; }
+.soft-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 9px rgba(121,255,80,.8); }
 
-/* AI card */
-.ai-card { margin-top: 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 1.25rem 1.4rem; }
-.ai-label { font-size: 11px; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.5rem; }
-.ai-text { font-size: 14px; color: #1a1a1a; line-height: 1.7; }
-.ai-empty { font-size: 13px; color: #aaa; font-style: italic; }
+.log-card { padding: 1.4rem; }
+.log-form .form-group { margin-bottom: .9rem; }
+.food-results { border: 1px solid #303b32; border-radius: 12px; margin-top: 7px; max-height: 280px; overflow-y: auto; background: #0c100d; box-shadow: 0 18px 40px rgba(0,0,0,.48); }
+.food-result { display: block; width: 100%; padding: 11px 12px; border: 0; border-bottom: 1px solid #252d27; background: #101511; text-align: left; cursor: pointer; }
+.food-result:last-child { border-bottom: 0; }
+.food-result:hover { background: rgba(121,255,80,.09); }
+.food-result-name { display: block; color: var(--ink); font-size: 13px; font-weight: 750; }
+.food-result-meta { display: block; color: #909b92; font-size: 11px; margin-top: 2px; }
+.search-status { color: #909b92; font-size: 11px; padding-top: 6px; }
+.selected-food { display: none; background: rgba(121,255,80,.1); border: 1px solid rgba(121,255,80,.3); border-radius: 11px; color: #baffaa; font-size: 12px; margin-top: 7px; padding: 9px 10px; }
+.form-row { display: grid; grid-template-columns: 1fr .65fr; gap: 10px; }
+.source-note { color: #7e8980; font-size: 10px; line-height: 1.5; margin-top: 10px; }
 
-/* Log form */
-.log-form .form-group { margin-bottom: 0.85rem; }
-.log-form label { font-size: 12px; }
-.log-form input, .log-form select { font-size: 13px; padding: 8px 10px; }
+.fuel-card { padding: 1.5rem; }
+.fuel-layout { display: grid; grid-template-columns: 210px 1fr; gap: 1.75rem; align-items: center; }
+.donut-wrap { text-align: center; }
+.donut {
+  position: relative; width: 182px; height: 182px; margin: 0 auto; border-radius: 50%;
+  background: conic-gradient(
+    #79ff50 0 {{ fueling.carb_end }}%,
+    #2fe0bb {{ fueling.carb_end }}% {{ fueling.protein_end }}%,
+    #d8ff5d {{ fueling.protein_end }}% 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 0 34px rgba(121,255,80,.15), 0 18px 34px rgba(0,0,0,.35);
+}
+.donut.no-data { background: conic-gradient(#29322b 0 100%); }
+.donut-center { position: absolute; inset: 28px; display: grid; place-content: center; border-radius: 50%; background: #0d120e; box-shadow: inset 0 0 0 1px #2b352d; }
+.donut-center strong { font-size: 24px; line-height: 1; letter-spacing: -.7px; }
+.donut-center span { color: var(--muted); font-size: 10px; margin-top: 5px; text-transform: uppercase; letter-spacing: .06em; }
+.donut-caption { color: var(--muted); font-size: 11px; margin-top: 12px; }
+.legend { display: flex; justify-content: center; gap: 12px; margin-top: 9px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; color: #9ba69d; font-size: 10px; }
+.legend i { width: 7px; height: 7px; border-radius: 50%; }
+
+.goal-list { display: grid; gap: 13px; }
+.goal-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.goal-name strong { display: block; font-size: 13px; }
+.goal-name span { color: #87938a; font-size: 10px; }
+.goal-value { font-size: 12px; font-weight: 800; }
+.goal-value small { color: #849087; font-size: 9px; font-weight: 600; }
+.range-track { position: relative; height: 8px; margin-top: 7px; border-radius: 99px; background: #252d27; overflow: visible; }
+.range-zone { position: absolute; height: 8px; border-radius: 99px; opacity: .24; }
+.range-marker { position: absolute; width: 13px; height: 13px; top: 50%; border: 2px solid #101511; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px currentColor; }
+
+.parent-cue { display: flex; gap: 12px; align-items: flex-start; margin-top: 1.4rem; padding: 13px 14px; border-radius: 13px; background: linear-gradient(135deg, rgba(121,255,80,.1), rgba(121,255,80,.035)); border: 1px solid rgba(121,255,80,.18); }
+.cue-icon { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 10px; background: rgba(121,255,80,.15); color: var(--green); font-weight: 900; }
+.parent-cue strong { display: block; font-size: 12px; }
+.parent-cue p { color: #a6b2a8; font-size: 11px; line-height: 1.55; margin-top: 2px; }
+.reference-note { color: #737f76; font-size: 9px; line-height: 1.5; margin-top: 12px; }
+.reference-note a { color: #9eff83; }
+
+.insight-card { grid-column: 2; padding: 1.35rem 1.5rem; background: linear-gradient(120deg, #090d0a, #132416); color: #fff; border: 1px solid rgba(121,255,80,.25); box-shadow: var(--shadow), var(--glow); }
+.insight-card .panel-heading { margin-bottom: .6rem; }
+.insight-card h2 { color: #fff; }
+.insight-label { color: var(--green); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; text-shadow: 0 0 12px rgba(121,255,80,.35); }
+.insight-text { color: #e3eee5; font-size: 13px; line-height: 1.7; }
+.insight-empty { color: #9eafa1; font-size: 12px; }
+
+.meals-card { grid-column: 1 / -1; margin-top: .05rem; }
+.meal-table { display: grid; }
+.meal-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 1rem; padding: 13px 0; border-bottom: 1px solid #29322b; }
+.meal-row:last-child { border-bottom: 0; }
+.meal-name { font-size: 13px; font-weight: 750; }
+.meal-meta { color: #87938a; font-size: 10px; margin-top: 2px; }
+.meal-tag { display: inline-block; color: #baffaa; background: rgba(121,255,80,.1); border: 1px solid rgba(121,255,80,.14); border-radius: 99px; padding: 3px 8px; font-size: 10px; font-weight: 750; }
+.meal-kcal { color: #b2bdb4; font-size: 12px; font-weight: 700; }
+.empty-meals { padding: 2.25rem 1rem; text-align: center; color: #87938a; font-size: 12px; }
+
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .insight-card { grid-column: 1; }
+  .meals-card { grid-column: 1; }
+}
+@media (max-width: 640px) {
+  .dashboard-hero { align-items: flex-start; flex-direction: column; }
+  .athlete-card { width: 100%; }
+  .snapshot-grid { grid-template-columns: 1fr; }
+  .fuel-layout { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .meal-row { grid-template-columns: 1fr auto; }
+  .meal-tag { display: none; }
+}
 {% endblock %}
+
 {% block content %}
-<div class="container">
-
-  <div class="dash-top">
+<main class="container">
+  <header class="dashboard-hero">
     <div>
-      <h1>Today's fuel log</h1>
-      <div class="date">{{ today }}</div>
+      <div class="eyebrow">Parent fueling dashboard</div>
+      <h1>Help {{ athlete.name }} feel ready for what’s next.</h1>
+      <p class="hero-sub">{{ today }} · {{ athlete.sport or 'Sport not set' }} · {{ athlete.training_schedule or 'Add a training schedule in Profile' }}</p>
     </div>
-    <span class="pill">{{ athlete.name }}, age {{ athlete.age }}</span>
-  </div>
+    <div class="athlete-card">
+      <strong>{{ athlete.name }}, age {{ athlete.age or '—' }}</strong>
+      <span>{{ fueling.status }}</span>
+    </div>
+  </header>
 
-  <div class="grid">
+  <section class="snapshot-grid" aria-label="Today's fueling snapshot">
+    <article class="snapshot" style="--tint:#79ff50">
+      <div class="snapshot-label">Meals logged</div>
+      <div class="snapshot-value">{{ fueling.meal_count }}</div>
+      <div class="snapshot-detail">Today’s family fuel log</div>
+    </article>
+    <article class="snapshot" style="--tint:#2fe0bb">
+      <div class="snapshot-label">Energy captured</div>
+      <div class="snapshot-value">{{ fueling.totals.calories | round | int }}</div>
+      <div class="snapshot-detail">kcal from USDA foods</div>
+    </article>
+    <article class="snapshot" style="--tint:#d8ff5d">
+      <div class="snapshot-label">Fueling objectives</div>
+      <div class="snapshot-value">{{ fueling.goals_met }} of 3</div>
+      <div class="snapshot-detail">macro ranges currently met</div>
+    </article>
+  </section>
 
-    <!-- Log a meal -->
-    <div class="card">
-      <div class="card-title">Log a meal</div>
+  <section class="dashboard-grid">
+    <article class="card log-card">
+      <div class="panel-heading">
+        <div>
+          <h2>Add what they ate</h2>
+          <p>Choose a verified USDA food and serving.</p>
+        </div>
+        <span class="soft-badge">USDA data</span>
+      </div>
+
       <form action="{{ url_for('log_meal') }}" method="POST" class="log-form">
         <div class="form-group">
-          <label>Food item *</label>
-          <input type="text" name="food_name" required placeholder="e.g. Grilled chicken and rice">
+          <label for="food-search">Search foods</label>
+          <input type="text" id="food-search" required autocomplete="off" placeholder="Try banana, oatmeal, chicken…">
+          <input type="hidden" name="fdc_id" id="fdc-id">
+          <div id="food-search-status" class="search-status" aria-live="polite"></div>
+          <div id="food-results" class="food-results" hidden></div>
+          <div id="selected-food" class="selected-food" aria-live="polite"></div>
         </div>
-        <div class="form-group">
-          <label>Meal</label>
-          <select name="meal_time">
-            <option>Breakfast</option>
-            <option>Lunch</option>
-            <option>Dinner</option>
-            <option selected>Snack</option>
-            <option>Pre-workout</option>
-            <option>Post-workout</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Servings</label>
-          <input type="number" name="portion_size" step="0.5" min="0.5" max="10" value="1">
-        </div>
-        <div class="form-group">
-          <label>Training today</label>
-          <input type="text" name="training_context" placeholder="e.g. 90-min practice, rest day">
-        </div>
-        <button type="submit" class="btn btn-green btn-full">Log meal + get AI insight</button>
-      </form>
-    </div>
 
-    <!-- Right: AI + meals -->
-    <div>
-      <div class="ai-card" style="margin-top: 0; margin-bottom: 1.25rem;">
-        <div class="ai-label">FuelIQ insight</div>
-        {% if feedback %}
-          <p class="ai-text">{{ feedback }}</p>
-        {% else %}
-          <p class="ai-empty">Log a meal to get a personalized nutrition insight for {{ athlete.name }}.</p>
-        {% endif %}
-      </div>
-
-      <div class="card">
-        <div class="card-title">Today's meals</div>
-
-        {% if meals %}
-          {% set cal = namespace(v=0) %}
-          {% set pro = namespace(v=0) %}
-          {% set carb = namespace(v=0) %}
-          {% for m in meals %}
-            {% if m.calories %}{% set cal.v = cal.v + m.calories %}{% endif %}
-            {% if m.protein_g %}{% set pro.v = pro.v + m.protein_g %}{% endif %}
-            {% if m.carbs_g %}{% set carb.v = carb.v + m.carbs_g %}{% endif %}
-          {% endfor %}
-
-          {% if cal.v > 0 %}
-          <div class="macros">
-            <div class="macro"><div class="val">{{ cal.v | int }}</div><div class="lbl">kcal</div></div>
-            <div class="macro"><div class="val">{{ "%.0f"|format(pro.v) }}g</div><div class="lbl">protein</div></div>
-            <div class="macro"><div class="val">{{ "%.0f"|format(carb.v) }}g</div><div class="lbl">carbs</div></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="meal-time">When</label>
+            <select name="meal_time" id="meal-time">
+              <option>Breakfast</option>
+              <option>Lunch</option>
+              <option>Dinner</option>
+              <option selected>Snack</option>
+              <option>Pre-workout</option>
+              <option>Post-workout</option>
+            </select>
           </div>
-          {% endif %}
+          <div class="form-group">
+            <label for="portion-size">Servings</label>
+            <input type="number" id="portion-size" name="portion_size" step="0.25" min="0.25" max="10" value="1">
+          </div>
+        </div>
 
-          <ul class="meal-list">
-          {% for meal in meals %}
-            <li class="meal-row">
-              <div>
-                <span class="meal-tag">{{ meal.meal_time }}</span>
-                <span class="meal-name">{{ meal.food_name }}</span>
-              </div>
-              <span class="meal-cal">{% if meal.calories %}{{ meal.calories | int }} kcal{% endif %}</span>
-            </li>
-          {% endfor %}
-          </ul>
+        <div class="form-group">
+          <label for="training-context">Today’s activity context</label>
+          <input type="text" id="training-context" name="training_context" placeholder="e.g. 90-min practice or rest day">
+        </div>
 
-        {% else %}
-          <div class="empty">Nothing logged yet today.<br>Add your first meal on the left.</div>
-        {% endif %}
+        <button type="submit" class="btn btn-green btn-full">Add to today’s fuel log</button>
+        <p class="source-note">Nutrients are calculated from the selected USDA serving. FuelIQ never uses weight-loss targets.</p>
+      </form>
+    </article>
+
+    <article class="card fuel-card">
+      <div class="panel-heading">
+        <div>
+          <h2>Today’s fueling balance</h2>
+          <p>Current macro mix compared with general youth-athlete ranges.</p>
+        </div>
+        <span class="soft-badge">{{ fueling.goals_met }}/3 in range</span>
       </div>
-    </div>
 
-  </div>
-</div>
+      <div class="fuel-layout">
+        <div class="donut-wrap">
+          <div class="donut {{ 'no-data' if not fueling.has_data else '' }}" role="img" aria-label="Pie chart of today's carbohydrate, protein, and fat energy distribution">
+            <div class="donut-center">
+              <strong>{{ fueling.meal_count }}</strong>
+              <span>meal{{ '' if fueling.meal_count == 1 else 's' }} logged</span>
+            </div>
+          </div>
+          <p class="donut-caption">Share of logged macro energy</p>
+          <div class="legend" aria-hidden="true">
+            <span><i style="background:#79ff50"></i>Carbs</span>
+            <span><i style="background:#2fe0bb"></i>Protein</span>
+            <span><i style="background:#d8ff5d"></i>Fat</span>
+          </div>
+        </div>
+
+        <div class="goal-list">
+          {% for goal in fueling.ranges %}
+          <div class="goal">
+            <div class="goal-top">
+              <div class="goal-name">
+                <strong>{{ goal.label }}</strong>
+                <span>{{ goal.purpose }}</span>
+              </div>
+              <div class="goal-value">{{ "%.1f"|format(goal.actual) }}% <small>goal {{ goal.minimum }}–{{ goal.maximum }}%</small></div>
+            </div>
+            <div class="range-track" aria-label="{{ goal.label }} is {{ goal.actual }} percent; reference range {{ goal.minimum }} to {{ goal.maximum }} percent">
+              <div class="range-zone" style="left:{{ goal.minimum }}%; width:{{ goal.maximum - goal.minimum }}%; background:{{ goal.color }}"></div>
+              <div class="range-marker" style="left:{{ goal.actual }}%; background:{{ goal.color }}"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="parent-cue">
+        <div class="cue-icon">♥</div>
+        <div>
+          <strong>Parent cue</strong>
+          <p>{{ fueling.guidance }} Keep water available, and ask how their energy felt before and after activity.</p>
+        </div>
+      </div>
+      <p class="reference-note">
+        General reference only—not a personalized prescription. Ranges follow
+        <a href="https://www.healthychildren.org/English/healthy-living/sports/Pages/Weigh-Ins-Weight-Gain-Rules-for-Teen-Athletes.aspx" target="_blank" rel="noopener">American Academy of Pediatrics guidance</a>.
+        Individual needs vary; consult a pediatrician or sports dietitian when needed.
+      </p>
+    </article>
+
+    <article class="card insight-card">
+      <div class="insight-label">FuelIQ family insight</div>
+      {% if feedback %}
+        <p class="insight-text">{{ feedback }}</p>
+      {% else %}
+        <p class="insight-empty">Log a USDA food to receive a simple, parent-friendly fueling observation for {{ athlete.name }}.</p>
+      {% endif %}
+    </article>
+
+    <article class="card meals-card">
+      <div class="panel-heading">
+        <div>
+          <h2>Today’s food story</h2>
+          <p>A clear timeline of what has been logged for {{ athlete.name }}.</p>
+        </div>
+        {% if meals %}<span class="soft-badge">{{ meals|length }} entries</span>{% endif %}
+      </div>
+
+      {% if meals %}
+      <div class="meal-table">
+        {% for meal in meals %}
+        <div class="meal-row">
+          <div>
+            <div class="meal-name">{{ meal.food_name }}</div>
+            <div class="meal-meta">
+              {% if meal.serving_size_g %}{{ "%.0f"|format(meal.serving_size_g * meal.portion_size) }} g{% endif %}
+              {% if meal.training_context %} · {{ meal.training_context }}{% endif %}
+            </div>
+          </div>
+          <span class="meal-tag">{{ meal.meal_time }}</span>
+          <span class="meal-kcal">{{ meal.calories | round | int if meal.calories else 0 }} kcal</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-meals">Nothing logged yet. Add the first meal to begin today’s story.</div>
+      {% endif %}
+    </article>
+  </section>
+</main>
+
+<script>
+(() => {
+  const input = document.getElementById('food-search');
+  const fdcId = document.getElementById('fdc-id');
+  const results = document.getElementById('food-results');
+  const status = document.getElementById('food-search-status');
+  const selected = document.getElementById('selected-food');
+  const form = input.closest('form');
+  let timer;
+  let controller;
+
+  function clearSelection() {
+    fdcId.value = '';
+    selected.style.display = 'none';
+    selected.textContent = '';
+  }
+
+  function showResults(foods) {
+    results.replaceChildren();
+    if (!foods.length) {
+      results.hidden = true;
+      status.textContent = 'No foods found. Try a simpler search.';
+      return;
+    }
+
+    foods.forEach((food) => {
+      const button = document.createElement('button');
+      const name = document.createElement('span');
+      const meta = document.createElement('span');
+      button.type = 'button';
+      button.className = 'food-result';
+      name.className = 'food-result-name';
+      meta.className = 'food-result-meta';
+      name.textContent = food.description + (food.brand ? ` — ${food.brand}` : '');
+      meta.textContent = `${food.calories} kcal · ${food.protein_g}g protein · ${food.carbs_g}g carbs · ${food.serving_label}`;
+      button.append(name, meta);
+      button.addEventListener('click', () => {
+        input.value = food.description;
+        fdcId.value = food.fdc_id;
+        selected.textContent = `Selected: ${food.description}${food.brand ? ` — ${food.brand}` : ''} · 1 serving = ${food.serving_label}`;
+        selected.style.display = 'block';
+        results.hidden = true;
+        status.textContent = '';
+      });
+      results.append(button);
+    });
+    results.hidden = false;
+    status.textContent = `${foods.length} USDA foods found`;
+  }
+
+  input.addEventListener('input', () => {
+    clearSelection();
+    clearTimeout(timer);
+    const query = input.value.trim();
+    results.hidden = true;
+    if (query.length < 2) {
+      status.textContent = query ? 'Type at least 2 characters.' : '';
+      return;
+    }
+
+    status.textContent = 'Searching USDA foods…';
+    timer = setTimeout(async () => {
+      if (controller) controller.abort();
+      controller = new AbortController();
+      try {
+        const response = await fetch(`/api/foods/search?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Search failed.');
+        showResults(data.foods);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          status.textContent = error.message || 'Food search is unavailable.';
+        }
+      }
+    }, 350);
+  });
+
+  form.addEventListener('submit', (event) => {
+    if (!fdcId.value) {
+      event.preventDefault();
+      status.textContent = 'Choose one of the USDA search results before logging.';
+      input.focus();
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -2,7 +2,7 @@
 
 **AI-Powered Nutrition Tracking for Young Athletes**
 
-FuelIQ helps parents fuel their young athletes properly. It is not a weight loss app. It connects what an athlete eats to how they are training — providing real-time, sport-aware meal feedback powered by Claude AI.
+FuelIQ helps parents fuel their young athletes properly. It is not a weight loss app. It connects what an athlete eats to how they are training — providing real-time, sport-aware meal feedback powered by a free-tier Llama model on Groq.
 
 ---
 
@@ -13,7 +13,7 @@ FuelIQ helps parents fuel their young athletes properly. It is not a weight loss
 | Backend | Python / Flask |
 | Database | SQLite (local dev) |
 | Nutrition Data | USDA FoodData Central API |
-| AI Feedback | Anthropic Claude API |
+| AI Feedback | Groq API / Llama 3.1 |
 | Frontend | HTML / CSS |
 
 ---
@@ -38,18 +38,24 @@ venv\Scripts\activate           # Windows
 ### 3. Install dependencies
 
 ```bash
-pip install flask flask-sqlalchemy werkzeug python-dotenv anthropic
+pip install -r requirements.txt
 ```
 
-### 4. Add your Anthropic API key (optional for local testing)
+### 4. Add API keys
 
 Create a file called `.env` inside the `fueliq` folder:
 
 ```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+SECRET_KEY=replace-with-a-long-random-value
+USDA_API_KEY=your-data-gov-api-key
+GROQ_API_KEY=your-groq-api-key
 ```
 
-AI feedback will silently skip if no key is present — everything else works without it.
+Get a free USDA key from the [FoodData Central API guide](https://fdc.nal.usda.gov/api-guide/).
+Food search falls back to USDA's rate-limited `DEMO_KEY` during local development.
+
+The support chatbot uses the built-in knowledge base first. Groq's free-tier
+Llama model handles unmatched app questions and personalized meal insights.
 
 ### 5. Run the app
 

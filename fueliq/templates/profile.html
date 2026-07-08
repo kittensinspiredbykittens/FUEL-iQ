@@ -3,8 +3,10 @@
 {% block styles %}
 .profile-wrap { max-width: 540px; margin: 0 auto; }
 .profile-wrap h1 { font-size: 21px; font-weight: 700; margin-bottom: 0.2rem; }
-.profile-wrap .sub { font-size: 14px; color: #999; margin-bottom: 1.75rem; }
+.profile-wrap .sub { font-size: 14px; color: var(--muted); margin-bottom: 1.75rem; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.profile-wrap .card { position: relative; overflow: hidden; }
+.profile-wrap .card::before { content: ""; position: absolute; top: 0; left: 28px; right: 28px; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); box-shadow: 0 0 18px rgba(121,255,80,.45); }
 {% endblock %}
 {% block content %}
 <div class="container">
