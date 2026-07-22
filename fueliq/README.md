@@ -51,6 +51,26 @@ USDA_API_KEY=your-data-gov-api-key
 GROQ_API_KEY=your-groq-api-key
 ```
 
+For password-reset email delivery, also configure:
+
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-username
+SMTP_PASSWORD=your-smtp-password
+MAIL_FROM=FuelIQ <support@example.com>
+```
+
+When SMTP is not configured and the local-development secret is in use, FuelIQ
+shows the time-limited reset link on the confirmation page for easy local testing.
+
+### Presentation demo
+
+Open `/demo` or select **Live demo** on the public landing page. FuelIQ creates
+an isolated demo family with a rolling two-week soccer fueling history. The demo
+includes an optional guided product tour and a reset control; it never modifies
+real family accounts.
+
 Get a free USDA key from the [FoodData Central API guide](https://fdc.nal.usda.gov/api-guide/).
 Food search falls back to USDA's rate-limited `DEMO_KEY` during local development.
 

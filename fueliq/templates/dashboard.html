@@ -110,7 +110,7 @@
 
 {% block content %}
 <main class="container">
-  <header class="dashboard-hero">
+  <header class="dashboard-hero" data-tour="dashboard-hero">
     <div>
       <div class="eyebrow">Parent fueling dashboard</div>
       <h1>Help {{ athlete.name }} feel ready for what’s next.</h1>
@@ -122,7 +122,7 @@
     </div>
   </header>
 
-  <section class="snapshot-grid" aria-label="Today's fueling snapshot">
+  <section class="snapshot-grid" aria-label="Today's fueling snapshot" data-tour="daily-snapshot">
     <article class="snapshot" style="--tint:#79ff50">
       <div class="snapshot-label">Meals logged</div>
       <div class="snapshot-value">{{ fueling.meal_count }}</div>
@@ -141,7 +141,7 @@
   </section>
 
   <section class="dashboard-grid">
-    <article class="card log-card">
+    <article class="card log-card" data-tour="meal-logger">
       <div class="panel-heading">
         <div>
           <h2>Add what they ate</h2>
@@ -188,7 +188,7 @@
       </form>
     </article>
 
-    <article class="card fuel-card">
+    <article class="card fuel-card" data-tour="fueling-balance">
       <div class="panel-heading">
         <div>
           <h2>Today’s fueling balance</h2>
@@ -246,7 +246,7 @@
       </p>
     </article>
 
-    <article class="card insight-card">
+    <article class="card insight-card" data-tour="family-insight">
       <div class="insight-label">FuelIQ family insight</div>
       {% if feedback %}
         <p class="insight-text">{{ feedback }}</p>
@@ -255,7 +255,7 @@
       {% endif %}
     </article>
 
-    <article class="card meals-card">
+    <article class="card meals-card" data-tour="food-story">
       <div class="panel-heading">
         <div>
           <h2>Today’s food story</h2>

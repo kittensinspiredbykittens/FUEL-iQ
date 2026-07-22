@@ -14,6 +14,7 @@
         <label>Password</label>
         <input type="password" name="password" required placeholder="••••••••">
       </div>
+      <p class="auth-action"><a href="{{ url_for('forgot_password') }}">Forgot password?</a></p>
       <button type="submit" class="btn btn-dark btn-full">Sign in</button>
     </form>
     <p class="auth-footer">No account? <a href="{{ url_for('register') }}">Create one free</a></p>

@@ -1,8 +1,164 @@
 {% extends "base.html" %}
 {% block title %}Analytics — FuelIQ{% endblock %}
+{% block styles %}
+.analytics-page { padding-top: 2rem; }
+.analytics-hero { display: flex; justify-content: space-between; align-items: end; gap: 1.5rem; margin-bottom: 1.5rem; }
+.eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 850; margin-bottom: .35rem; }
+.analytics-hero h1 { font-size: clamp(28px, 4vw, 44px); line-height: 1.08; letter-spacing: -1.5px; }
+.hero-sub { color: var(--muted); margin-top: .55rem; }
+.period-switcher { display: flex; gap: .35rem; padding: .35rem; border: 1px solid var(--line); background: #0b100c; border-radius: 12px; }
+.period-switcher a { color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 750; padding: .45rem .7rem; border-radius: 8px; white-space: nowrap; }
+.period-switcher a.active { color: #071007; background: var(--green); }
+.trend-note { display: flex; gap: .8rem; align-items: center; padding: .85rem 1rem; margin-bottom: 1.25rem; background: rgba(121,255,80,.08); border: 1px solid rgba(121,255,80,.24); border-radius: 14px; }
+.trend-note i { width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 16px var(--green); flex: 0 0 auto; }
+.trend-note strong { display: block; font-size: 13px; }
+.trend-note p { color: var(--muted); font-size: 12px; }
+.analytics-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: .85rem; margin-bottom: 1rem; }
+.kpi { position: relative; overflow: hidden; padding: 1.15rem; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, #171e18, #101511); }
+.kpi::after { content: ""; position: absolute; width: 80px; height: 80px; right: -35px; top: -35px; border-radius: 50%; background: var(--accent); opacity: .12; filter: blur(2px); }
+.kpi-label { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 800; }
+.kpi-value { display: block; font-size: 29px; line-height: 1; margin: .55rem 0 .35rem; letter-spacing: -1px; }
+.kpi-detail { color: #c3cec5; font-size: 11px; }
+.analytics-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .8fr); gap: 1rem; margin-bottom: 1rem; }
+.panel-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; margin-bottom: 1.25rem; }
+.panel-heading h2 { font-size: 17px; letter-spacing: -.35px; }
+.panel-heading p { color: var(--muted); font-size: 12px; margin-top: .2rem; }
+.soft-badge { color: #baffaa; background: rgba(121,255,80,.1); border: 1px solid rgba(121,255,80,.22); border-radius: 99px; padding: .3rem .55rem; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.activity-chart { height: 250px; display: grid; grid-template-columns: repeat(var(--days), minmax(20px, 1fr)); align-items: end; gap: min(1.3vw, .7rem); padding: 1rem .25rem 0; border-bottom: 1px solid #2d372f; background: repeating-linear-gradient(to top, transparent 0, transparent 59px, rgba(255,255,255,.045) 60px); }
+.day-column { min-width: 0; text-align: center; }
+.bar-space { height: 188px; display: flex; align-items: end; justify-content: center; }
+.day-bar { width: min(32px, 78%); min-height: 4px; height: var(--height); border-radius: 7px 7px 2px 2px; background: linear-gradient(180deg, #91ff6c, #48da2d); box-shadow: 0 0 18px rgba(121,255,80,.12); position: relative; }
+.day-bar.empty { background: #263027; box-shadow: none; }
+.day-bar:hover::after { content: attr(data-detail); position: absolute; z-index: 2; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 160px; padding: .45rem .55rem; background: #050705; color: #eaffdf; border: 1px solid #354139; border-radius: 8px; font-size: 10px; }
+.day-label { display: block; color: #c8d2ca; font-size: 10px; font-weight: 750; margin-top: .5rem; }
+.day-date { display: block; color: #6f7b71; font-size: 9px; }
+.macro-layout { display: grid; justify-items: center; }
+.donut { --carb-end: {{ analytics.fueling.carb_end }}%; --protein-end: {{ analytics.fueling.protein_end }}%; position: relative; width: 166px; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(#79ff50 0 var(--carb-end), #2fe0bb var(--carb-end) var(--protein-end), #d8ff5d var(--protein-end) 100%); box-shadow: 0 0 34px rgba(121,255,80,.12); }
+.donut.no-data { background: #29322b; }
+.donut::after { content: ""; position: absolute; inset: 29px; border-radius: 50%; background: #0d120e; border: 1px solid #2a342c; }
+.donut-center { position: absolute; z-index: 1; inset: 0; display: grid; place-content: center; text-align: center; }
+.donut-center strong { font-size: 25px; }
+.donut-center span { color: var(--muted); font-size: 10px; }
+.macro-list { width: 100%; margin-top: 1.2rem; display: grid; gap: .65rem; }
+.macro-row { display: grid; grid-template-columns: 9px 1fr auto; gap: .55rem; align-items: center; font-size: 12px; }
+.macro-row i { width: 9px; height: 9px; border-radius: 50%; }
+.macro-row span { color: var(--muted); }
+.macro-row strong { font-size: 12px; }
+.secondary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.nutrient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.nutrient { padding: .85rem; background: #0d120e; border: 1px solid #283229; border-radius: 12px; }
+.nutrient span { color: var(--muted); display: block; font-size: 10px; }
+.nutrient strong { font-size: 19px; }
+.nutrient small { color: #94a198; font-size: 10px; margin-left: .15rem; }
+.timing-list { display: grid; gap: .75rem; }
+.timing-row { display: grid; grid-template-columns: 86px 1fr 28px; gap: .6rem; align-items: center; font-size: 11px; }
+.timing-row span { color: #c9d3cb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timing-track { height: 7px; background: #242d25; border-radius: 99px; overflow: hidden; }
+.timing-fill { display: block; height: 100%; background: linear-gradient(90deg, #2fe0bb, #79ff50); border-radius: inherit; }
+.timing-row strong { text-align: right; }
+.empty-mini { color: var(--muted); font-size: 12px; padding: 1.25rem 0; }
+.meal-table { width: 100%; border-collapse: collapse; }
+.meal-table th { color: #728077; text-align: left; text-transform: uppercase; letter-spacing: .08em; font-size: 9px; padding: .6rem .7rem; border-bottom: 1px solid #2b352d; }
+.meal-table td { padding: .8rem .7rem; border-bottom: 1px solid #242d26; font-size: 12px; color: #cbd6cd; }
+.meal-table tr:last-child td { border-bottom: 0; }
+.meal-table strong { color: var(--ink); display: block; }
+.meal-table small { color: var(--muted); }
+.table-empty { text-align: center; padding: 2.5rem 1rem; color: var(--muted); font-size: 12px; }
+.reference-note { color: #748078; font-size: 10px; margin-top: .9rem; }
+@media (max-width: 860px) { .analytics-grid, .secondary-grid { grid-template-columns: 1fr; } .analytics-kpis { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .analytics-hero { align-items: start; flex-direction: column; } .analytics-kpis { grid-template-columns: 1fr 1fr; } .activity-chart { overflow-x: auto; grid-template-columns: repeat(var(--days), minmax(28px, 1fr)); } .meal-table th:nth-child(3), .meal-table td:nth-child(3), .meal-table th:nth-child(4), .meal-table td:nth-child(4) { display: none; } }
+{% endblock %}
 {% block content %}
-<div class="container" style="text-align:center; padding-top: 5rem;">
-  <h2 style="font-size:20px; font-weight:700; margin-bottom:0.5rem;">Analytics coming soon</h2>
-  <p style="color:#999; font-size:14px;">Weekly trends and macro breakdowns for {{ athlete.name }} will live here.</p>
-</div>
+<main class="container analytics-page">
+  <header class="analytics-hero" data-tour="analytics-hero">
+    <div>
+      <div class="eyebrow">Fueling history</div>
+      <h1>{{ athlete.name }}’s bigger picture.</h1>
+      <p class="hero-sub">{{ analytics.period_label }} · {{ athlete.sport or 'Sport not set' }}</p>
+    </div>
+    <nav class="period-switcher" aria-label="Analytics period">
+      {% for option in period_options %}
+      <a href="{{ url_for('analytics', days=option) }}" class="{{ 'active' if analytics.days == option else '' }}" {% if analytics.days == option %}aria-current="page"{% endif %}>{{ option }} days</a>
+      {% endfor %}
+    </nav>
+  </header>
+
+  <section class="trend-note" aria-label="Analytics summary">
+    <i aria-hidden="true"></i>
+    <div><strong>{{ analytics.status }}</strong><p>{{ analytics.guidance }}</p></div>
+  </section>
+
+  <section class="analytics-kpis" aria-label="Period summary" data-tour="analytics-kpis">
+    <article class="kpi" style="--accent:#79ff50"><span class="kpi-label">Meals logged</span><strong class="kpi-value">{{ analytics.meal_count }}</strong><span class="kpi-detail">across this {{ analytics.days }}-day view</span></article>
+    <article class="kpi" style="--accent:#2fe0bb"><span class="kpi-label">Active days</span><strong class="kpi-value">{{ analytics.active_days }}/{{ analytics.days }}</strong><span class="kpi-detail">{{ analytics.logging_rate }}% of days captured</span></article>
+    <article class="kpi" style="--accent:#d8ff5d"><span class="kpi-label">Meals / active day</span><strong class="kpi-value">{{ analytics.average_meals }}</strong><span class="kpi-detail">average on logged days</span></article>
+    <article class="kpi" style="--accent:#8ea2ff"><span class="kpi-label">Current streak</span><strong class="kpi-value">{{ analytics.current_streak }}</strong><span class="kpi-detail">consecutive day{{ '' if analytics.current_streak == 1 else 's' }}</span></article>
+  </section>
+
+  <section class="analytics-grid">
+    <article class="card" data-tour="daily-activity">
+      <div class="panel-heading"><div><h2>Daily fueling activity</h2><p>Captured energy and meal count by day.</p></div><span class="soft-badge">{{ analytics.fueling.totals.calories | round | int }} kcal captured</span></div>
+      <div class="activity-chart" style="--days:{{ analytics.days }}" role="img" aria-label="Daily bar chart for the selected period">
+        {% for day in analytics.daily %}
+        <div class="day-column">
+          <div class="bar-space"><div class="day-bar {{ 'empty' if not day.has_meals else '' }}" style="--height:{{ day.bar_height }}%" data-detail="{{ day.full_label }} · {{ day.meal_count }} {{ day.meal_label }} · {{ day.calories }} kcal" title="{{ day.full_label }}: {{ day.meal_count }} {{ day.meal_label }}, {{ day.calories }} kcal"></div></div>
+          <span class="day-label">{{ day.short_label }}</span><span class="day-date">{{ day.date_label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="card" data-tour="macro-history">
+      <div class="panel-heading"><div><h2>Macro balance</h2><p>Share of captured macro energy.</p></div><span class="soft-badge">{{ analytics.fueling.goals_met }}/3 in range</span></div>
+      <div class="macro-layout">
+        <div class="donut {{ 'no-data' if not analytics.fueling.has_data else '' }}" role="img" aria-label="Carbohydrate {{ analytics.fueling.percentages.carbs }} percent, protein {{ analytics.fueling.percentages.protein }} percent, fat {{ analytics.fueling.percentages.fat }} percent">
+          <div class="donut-center"><strong>{{ analytics.meal_count }}</strong><span>meals in view</span></div>
+        </div>
+        <div class="macro-list">
+          <div class="macro-row"><i style="background:#79ff50"></i><span>Carbohydrates</span><strong>{{ analytics.fueling.percentages.carbs }}%</strong></div>
+          <div class="macro-row"><i style="background:#2fe0bb"></i><span>Protein</span><strong>{{ analytics.fueling.percentages.protein }}%</strong></div>
+          <div class="macro-row"><i style="background:#d8ff5d"></i><span>Fat</span><strong>{{ analytics.fueling.percentages.fat }}%</strong></div>
+        </div>
+      </div>
+      <p class="reference-note">General youth-athlete reference ranges, not a personalized prescription.</p>
+    </article>
+  </section>
+
+  <section class="secondary-grid" data-tour="nutrient-history">
+    <article class="card">
+      <div class="panel-heading"><div><h2>Captured nutrients</h2><p>Totals from USDA foods in this window.</p></div></div>
+      <div class="nutrient-grid">
+        {% for nutrient in analytics.nutrient_totals %}
+        <div class="nutrient"><span>{{ nutrient.label }}</span><strong>{{ nutrient.value }}</strong><small>{{ nutrient.unit }}</small></div>
+        {% endfor %}
+      </div>
+    </article>
+    <article class="card">
+      <div class="panel-heading"><div><h2>Meal timing</h2><p>How logged meals are distributed.</p></div></div>
+      {% if analytics.timing_breakdown %}
+      <div class="timing-list">
+        {% for timing in analytics.timing_breakdown %}
+        <div class="timing-row"><span>{{ timing.label }}</span><div class="timing-track"><i class="timing-fill" style="width:{{ timing.width }}%"></i></div><strong>{{ timing.count }}</strong></div>
+        {% endfor %}
+      </div>
+      {% else %}<p class="empty-mini">Meal timing appears after the first logged food.</p>{% endif %}
+    </article>
+  </section>
+
+  <section class="card" data-tour="recent-foods">
+    <div class="panel-heading"><div><h2>Recent foods</h2><p>The latest USDA foods in this period.</p></div><a class="soft-badge" href="{{ url_for('dashboard') }}">Log a meal</a></div>
+    {% if analytics.recent_meals %}
+    <div style="overflow-x:auto">
+      <table class="meal-table">
+        <thead><tr><th>Food</th><th>Date</th><th>Timing</th><th>Energy</th><th>Macros</th></tr></thead>
+        <tbody>
+          {% for meal in analytics.recent_meals %}
+          <tr><td><strong>{{ meal.food_name }}</strong><small>{{ meal.portion_size or 1 }} serving{{ '' if meal.portion_size == 1 else 's' }}</small></td><td>{{ meal.logged_date }}</td><td>{{ meal.meal_time or '—' }}</td><td>{{ meal.calories | default(0, true) | round | int }} kcal</td><td>{{ meal.carbs_g | default(0, true) | round(1) }}c · {{ meal.protein_g | default(0, true) | round(1) }}p · {{ meal.fat_g | default(0, true) | round(1) }}f</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="table-empty">No meals were logged in this period. Add a USDA food from the Dashboard to begin the history.</div>{% endif %}
+  </section>
+</main>
 {% endblock %}

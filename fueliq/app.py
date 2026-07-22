@@ -2,11 +2,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-from datetime import date
+import hashlib
+import hmac
+import smtplib
+from datetime import date, timedelta
+from email.message import EmailMessage
 from functools import wraps
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import inspect, text
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -18,6 +23,15 @@ if database_url.startswith('postgres://'):
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fueliq-local-dev-only')
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PASSWORD_RESET_MAX_AGE'] = int(os.getenv('PASSWORD_RESET_MAX_AGE', '3600'))
+app.config['SHOW_RESET_LINK'] = (
+    os.getenv('SHOW_RESET_LINK', '').lower() in {'1', 'true', 'yes'}
+    or app.config['SECRET_KEY'] == 'fueliq-local-dev-only'
+)
+app.config['DEV_LOGIN_ENABLED'] = os.getenv('DEV_LOGIN_ENABLED', '').lower() in {
+    '1', 'true', 'yes'
+}
+app.config['DEMO_ACCOUNT_EMAIL'] = 'demo@fueliq.local'
 
 db = SQLAlchemy(app)
 
@@ -97,6 +111,200 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+
+def password_reset_token(user):
+    """Create a signed token tied to the user's current password."""
+    serializer = URLSafeTimedSerializer(
+        app.config['SECRET_KEY'],
+        salt='fueliq-password-reset',
+    )
+    password_signature = hashlib.sha256(
+        user.password_hash.encode('utf-8')
+    ).hexdigest()
+    return serializer.dumps({'user_id': user.id, 'password_signature': password_signature})
+
+
+def user_from_password_reset_token(token):
+    serializer = URLSafeTimedSerializer(
+        app.config['SECRET_KEY'],
+        salt='fueliq-password-reset',
+    )
+    try:
+        payload = serializer.loads(
+            token,
+            max_age=app.config['PASSWORD_RESET_MAX_AGE'],
+        )
+    except (BadSignature, SignatureExpired):
+        return None
+
+    user = db.session.get(User, payload.get('user_id'))
+    if not user:
+        return None
+
+    expected_signature = hashlib.sha256(
+        user.password_hash.encode('utf-8')
+    ).hexdigest()
+    if not hmac.compare_digest(
+        str(payload.get('password_signature', '')),
+        expected_signature,
+    ):
+        return None
+    return user
+
+
+def send_password_reset_email(user, reset_url):
+    """Send a reset link when SMTP is configured; return False in local-only mode."""
+    smtp_host = os.getenv('SMTP_HOST')
+    sender = os.getenv('MAIL_FROM')
+    if not smtp_host or not sender:
+        return False
+
+    message = EmailMessage()
+    message['Subject'] = 'Reset your FuelIQ password'
+    message['From'] = sender
+    message['To'] = user.email
+    message.set_content(
+        'We received a request to reset your FuelIQ password.\n\n'
+        f'Reset it here: {reset_url}\n\n'
+        'This link expires in one hour. If you did not request this, you can ignore this email.'
+    )
+
+    port = int(os.getenv('SMTP_PORT', '587'))
+    username = os.getenv('SMTP_USERNAME')
+    password = os.getenv('SMTP_PASSWORD')
+    with smtplib.SMTP(smtp_host, port, timeout=10) as smtp:
+        if os.getenv('SMTP_USE_TLS', '1').lower() not in {'0', 'false', 'no'}:
+            smtp.starttls()
+        if username:
+            smtp.login(username, password or '')
+        smtp.send_message(message)
+    return True
+
+
+def seed_demo_account():
+    """Create a repeatable presentation dataset without touching real accounts."""
+    email = app.config['DEMO_ACCOUNT_EMAIL']
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(
+            email=email,
+            password_hash=generate_password_hash(os.urandom(24).hex()),
+        )
+        db.session.add(user)
+        db.session.flush()
+
+    athlete = Athlete.query.filter_by(user_id=user.id).first()
+    if not athlete:
+        athlete = Athlete(user_id=user.id, name='Jordan')
+        db.session.add(athlete)
+        db.session.flush()
+
+    athlete.name = 'Jordan'
+    athlete.age = 14
+    athlete.sport = 'Soccer'
+    athlete.training_schedule = 'Club practice Mon/Wed/Fri · Match Saturday'
+    athlete.dietary_notes = 'Peanut-free team environment'
+
+    Meal.query.filter_by(athlete_id=athlete.id).delete()
+
+    foods = {
+        'oatmeal': {
+            'food_name': 'Oatmeal With Banana, Milk, And Cinnamon',
+            'calories': 420, 'carbs_g': 72, 'protein_g': 16, 'fat_g': 8,
+            'fiber_g': 8, 'calcium_mg': 280, 'iron_mg': 3.1,
+            'vitamin_d_mcg': 2.4, 'magnesium_mg': 112,
+        },
+        'eggs': {
+            'food_name': 'Eggs, Whole-Grain Toast, And Orange',
+            'calories': 390, 'carbs_g': 48, 'protein_g': 23, 'fat_g': 13,
+            'fiber_g': 6, 'calcium_mg': 150, 'iron_mg': 3.4,
+            'vitamin_d_mcg': 2.2, 'magnesium_mg': 68,
+        },
+        'yogurt': {
+            'food_name': 'Greek Yogurt With Berries And Granola',
+            'calories': 335, 'carbs_g': 49, 'protein_g': 24, 'fat_g': 6,
+            'fiber_g': 6, 'calcium_mg': 260, 'iron_mg': 1.2,
+            'vitamin_d_mcg': 1.5, 'magnesium_mg': 74,
+        },
+        'sandwich': {
+            'food_name': 'Turkey And Avocado Whole-Grain Sandwich',
+            'calories': 510, 'carbs_g': 58, 'protein_g': 32, 'fat_g': 17,
+            'fiber_g': 9, 'calcium_mg': 190, 'iron_mg': 3.8,
+            'vitamin_d_mcg': 0.5, 'magnesium_mg': 96,
+        },
+        'rice_bowl': {
+            'food_name': 'Chicken, Brown Rice, And Roasted Vegetable Bowl',
+            'calories': 640, 'carbs_g': 88, 'protein_g': 43, 'fat_g': 15,
+            'fiber_g': 10, 'calcium_mg': 120, 'iron_mg': 4.4,
+            'vitamin_d_mcg': 0.4, 'magnesium_mg': 142,
+        },
+        'pasta': {
+            'food_name': 'Pasta With Turkey Meat Sauce And Spinach',
+            'calories': 690, 'carbs_g': 94, 'protein_g': 39, 'fat_g': 18,
+            'fiber_g': 11, 'calcium_mg': 210, 'iron_mg': 5.8,
+            'vitamin_d_mcg': 0.3, 'magnesium_mg': 126,
+        },
+        'salmon': {
+            'food_name': 'Salmon With Potatoes And Broccoli',
+            'calories': 610, 'carbs_g': 59, 'protein_g': 42, 'fat_g': 24,
+            'fiber_g': 9, 'calcium_mg': 135, 'iron_mg': 2.7,
+            'vitamin_d_mcg': 14.2, 'magnesium_mg': 118,
+        },
+        'smoothie': {
+            'food_name': 'Berry Banana Yogurt Smoothie',
+            'calories': 365, 'carbs_g': 62, 'protein_g': 18, 'fat_g': 6,
+            'fiber_g': 7, 'calcium_mg': 310, 'iron_mg': 1.5,
+            'vitamin_d_mcg': 2.1, 'magnesium_mg': 92,
+        },
+        'recovery': {
+            'food_name': 'Chocolate Milk And Banana',
+            'calories': 315, 'carbs_g': 53, 'protein_g': 13, 'fat_g': 6,
+            'fiber_g': 3, 'calcium_mg': 340, 'iron_mg': 1.0,
+            'vitamin_d_mcg': 2.6, 'magnesium_mg': 88,
+        },
+    }
+
+    breakfast_cycle = ('oatmeal', 'eggs', 'yogurt')
+    lunch_cycle = ('sandwich', 'rice_bowl', 'pasta')
+    dinner_cycle = ('salmon', 'pasta', 'rice_bowl')
+    active_offsets = [offset for offset in range(-13, 1) if offset not in {-10, -5}]
+
+    for index, offset in enumerate(active_offsets):
+        logged_day = date.today() + timedelta(days=offset)
+        is_training_day = logged_day.weekday() in {0, 2, 4, 5}
+        entries = [
+            (breakfast_cycle[index % 3], 'Breakfast', 'Morning fuel'),
+            (lunch_cycle[index % 3], 'Lunch', 'School-day lunch'),
+            (dinner_cycle[index % 3], 'Dinner', 'Evening recovery meal'),
+        ]
+        if is_training_day:
+            entries.insert(2, (
+                'recovery' if index % 2 else 'smoothie',
+                'Post-workout',
+                'After 90-minute soccer practice' if logged_day.weekday() != 5 else 'After match',
+            ))
+
+        for food_key, meal_time, context in entries:
+            details = foods[food_key]
+            meal = Meal(
+                athlete_id=athlete.id,
+                meal_time=meal_time,
+                portion_size=1,
+                training_context=context,
+                serving_size_g=details['calories'] / 2,
+                logged_date=logged_day.isoformat(),
+                **details,
+            )
+            if offset == 0 and meal_time == 'Post-workout':
+                meal.ai_feedback = (
+                    'This recovery snack pairs carbohydrate for restoring energy with protein '
+                    'for muscle recovery. Keep water available alongside it after practice.'
+                )
+            db.session.add(meal)
+
+    db.session.commit()
+    return user, athlete
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -304,6 +512,107 @@ def build_fueling_summary(meals):
     }
 
 
+def build_analytics(meals, days=7, anchor_date=None):
+    """Build a parent-friendly history summary from logged USDA meals."""
+    anchor_date = anchor_date or date.today()
+    start_date = anchor_date - timedelta(days=days - 1)
+    dates = [start_date + timedelta(days=offset) for offset in range(days)]
+    meals_by_date = {day.isoformat(): [] for day in dates}
+
+    for meal in meals:
+        if meal.logged_date in meals_by_date:
+            meals_by_date[meal.logged_date].append(meal)
+
+    daily = []
+    for day in dates:
+        day_meals = meals_by_date[day.isoformat()]
+        daily.append({
+            'date': day.isoformat(),
+            'short_label': f'{day:%a}',
+            'date_label': f'{day:%b} {day.day}',
+            'full_label': f'{day:%A}, {day:%B} {day.day}',
+            'meal_count': len(day_meals),
+            'meal_label': 'meal' if len(day_meals) == 1 else 'meals',
+            'calories': round(sum(meal.calories or 0 for meal in day_meals)),
+            'carbs_g': round(sum(meal.carbs_g or 0 for meal in day_meals), 1),
+            'protein_g': round(sum(meal.protein_g or 0 for meal in day_meals), 1),
+            'fat_g': round(sum(meal.fat_g or 0 for meal in day_meals), 1),
+            'has_meals': bool(day_meals),
+        })
+
+    max_calories = max((item['calories'] for item in daily), default=0)
+    max_meals = max((item['meal_count'] for item in daily), default=0)
+    for item in daily:
+        if max_calories:
+            relative_height = item['calories'] / max_calories
+        elif max_meals:
+            relative_height = item['meal_count'] / max_meals
+        else:
+            relative_height = 0
+        item['bar_height'] = max(10, round(relative_height * 100)) if item['has_meals'] else 3
+
+    period_meals = [meal for day_meals in meals_by_date.values() for meal in day_meals]
+    fueling = build_fueling_summary(period_meals)
+    active_days = sum(item['has_meals'] for item in daily)
+    current_streak = 0
+    for item in reversed(daily):
+        if not item['has_meals']:
+            break
+        current_streak += 1
+
+    meal_times = {}
+    for meal in period_meals:
+        label = (meal.meal_time or 'Unspecified').strip() or 'Unspecified'
+        meal_times[label] = meal_times.get(label, 0) + 1
+    timing_breakdown = [
+        {'label': label, 'count': count, 'width': round(count / len(period_meals) * 100)}
+        for label, count in sorted(meal_times.items(), key=lambda item: (-item[1], item[0]))
+    ] if period_meals else []
+
+    nutrient_totals = [
+        {'label': 'Fiber', 'value': round(sum(meal.fiber_g or 0 for meal in period_meals), 1), 'unit': 'g'},
+        {'label': 'Calcium', 'value': round(sum(meal.calcium_mg or 0 for meal in period_meals)), 'unit': 'mg'},
+        {'label': 'Iron', 'value': round(sum(meal.iron_mg or 0 for meal in period_meals), 1), 'unit': 'mg'},
+        {'label': 'Vitamin D', 'value': round(sum(meal.vitamin_d_mcg or 0 for meal in period_meals), 1), 'unit': 'mcg'},
+    ]
+
+    if not period_meals:
+        status = 'Ready for the first trend'
+        guidance = 'Log meals on the Dashboard to begin a clear, day-by-day fueling history.'
+    elif current_streak >= 3:
+        status = f'{current_streak}-day logging streak'
+        guidance = 'Several consecutive days are captured, making patterns easier to compare.'
+    elif active_days >= max(2, days // 2):
+        status = 'A clear pattern is forming'
+        guidance = 'Meals are captured across much of this window. Keep logging for a fuller picture.'
+    else:
+        status = 'The history is taking shape'
+        guidance = 'A few more logged days will make the comparison more representative.'
+
+    recent_meals = sorted(
+        period_meals,
+        key=lambda meal: (meal.logged_date or '', meal.id or 0),
+        reverse=True,
+    )[:8]
+
+    return {
+        'days': days,
+        'period_label': f'{start_date:%b} {start_date.day} – {anchor_date:%b} {anchor_date.day}',
+        'daily': daily,
+        'meal_count': len(period_meals),
+        'active_days': active_days,
+        'logging_rate': round(active_days / days * 100),
+        'average_meals': round(len(period_meals) / active_days, 1) if active_days else 0,
+        'current_streak': current_streak,
+        'fueling': fueling,
+        'nutrient_totals': nutrient_totals,
+        'timing_breakdown': timing_breakdown,
+        'recent_meals': recent_meals,
+        'status': status,
+        'guidance': guidance,
+    }
+
+
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -353,6 +662,126 @@ def login():
         flash('Invalid email or password.', 'danger')
 
     return render_template('login.html')
+
+
+@app.route('/dev-login')
+def dev_login():
+    if not app.config['DEV_LOGIN_ENABLED']:
+        return 'Not found', 404
+
+    user = User.query.order_by(User.id).first()
+    if not user:
+        flash('Create a local account before using the development login.', 'info')
+        return redirect(url_for('register'))
+
+    session.clear()
+    session['user_id'] = user.id
+    if user.athletes:
+        session['athlete_id'] = user.athletes[0].id
+        destination = 'dashboard'
+    else:
+        destination = 'profile'
+    flash('Signed in with the local development bypass.', 'success')
+    return redirect(url_for(destination))
+
+
+@app.route('/demo')
+def demo_entry():
+    return_user_id = session.get('demo_return_user_id')
+    return_athlete_id = session.get('demo_return_athlete_id')
+    if not session.get('demo_mode'):
+        return_user_id = session.get('user_id')
+        return_athlete_id = session.get('athlete_id')
+
+    user, athlete = seed_demo_account()
+    session.clear()
+    if return_user_id and return_user_id != user.id:
+        session['demo_return_user_id'] = return_user_id
+        if return_athlete_id:
+            session['demo_return_athlete_id'] = return_athlete_id
+    session['user_id'] = user.id
+    session['athlete_id'] = athlete.id
+    session['demo_mode'] = True
+    return redirect(url_for('dashboard', demo_welcome=1))
+
+
+@app.route('/demo/reset', methods=['POST'])
+def demo_reset():
+    if not session.get('demo_mode'):
+        return 'Not found', 404
+    user, athlete = seed_demo_account()
+    session['user_id'] = user.id
+    session['athlete_id'] = athlete.id
+    flash('The presentation dataset has been restored.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/demo/exit')
+def demo_exit():
+    return_user_id = session.get('demo_return_user_id')
+    return_athlete_id = session.get('demo_return_athlete_id')
+    session.clear()
+
+    return_user = db.session.get(User, return_user_id) if return_user_id else None
+    if return_user:
+        session['user_id'] = return_user.id
+        return_athlete = db.session.get(Athlete, return_athlete_id) if return_athlete_id else None
+        if return_athlete and return_athlete.user_id == return_user.id:
+            session['athlete_id'] = return_athlete.id
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    reset_url = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first() if email else None
+
+        if user:
+            token = password_reset_token(user)
+            generated_url = url_for('reset_password', token=token, _external=True)
+            delivered = False
+            try:
+                delivered = send_password_reset_email(user, generated_url)
+            except (OSError, smtplib.SMTPException, ValueError):
+                app.logger.exception('Password reset email failed')
+
+            if not delivered and (app.config['TESTING'] or app.config['SHOW_RESET_LINK']):
+                reset_url = generated_url
+
+        flash(
+            'If an account matches that email, password reset instructions are ready.',
+            'success',
+        )
+
+    return render_template('forgot_password.html', reset_url=reset_url)
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    user = user_from_password_reset_token(token)
+    if not user:
+        flash('That password reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirmation = request.form.get('confirm_password', '')
+
+        if len(password) < 8:
+            flash('Choose a password with at least 8 characters.', 'danger')
+        elif password != confirmation:
+            flash('The passwords do not match.', 'danger')
+        else:
+            user.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+            db.session.commit()
+            session.clear()
+            flash('Your password has been reset. You can sign in now.', 'success')
+            return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
 
 
 @app.route('/logout')
@@ -513,7 +942,22 @@ def analytics():
     athlete = current_athlete()
     if not athlete:
         return redirect(url_for('profile'))
-    return render_template('analytics.html', athlete=athlete)
+    days = request.args.get('days', type=int)
+    if days not in {7, 14, 30}:
+        days = 7
+    today = date.today()
+    start_date = today - timedelta(days=days - 1)
+    meals = Meal.query.filter(
+        Meal.athlete_id == athlete.id,
+        Meal.logged_date >= start_date.isoformat(),
+        Meal.logged_date <= today.isoformat(),
+    ).order_by(Meal.logged_date.asc(), Meal.id.asc()).all()
+    return render_template(
+        'analytics.html',
+        athlete=athlete,
+        analytics=build_analytics(meals, days=days, anchor_date=today),
+        period_options=(7, 14, 30),
+    )
 
 
 # ── AI feedback ───────────────────────────────────────────────────────────────
@@ -544,6 +988,50 @@ def groq_completion(system_prompt, message, max_tokens=250):
     return response.json()['choices'][0]['message']['content']
 
 
+def local_meal_feedback(athlete, meal):
+    carbs = meal.carbs_g or 0
+    protein = meal.protein_g or 0
+    activity = (meal.training_context or '').lower()
+    sport = f" for {athlete.sport}" if athlete.sport else ''
+
+    if carbs >= 15 and protein >= 8:
+        observation = (
+            f"{meal.food_name} brings both carbohydrate for activity and protein "
+            f"for recovery{sport}."
+        )
+    elif carbs >= 15:
+        observation = (
+            f"{meal.food_name} contributes carbohydrate that can help support "
+            f"training energy{sport}."
+        )
+    elif protein >= 8:
+        observation = (
+            f"{meal.food_name} contributes protein that can help support "
+            f"muscle recovery{sport}."
+        )
+    else:
+        observation = (
+            f"{meal.food_name} adds to {athlete.name}'s overall fueling for the day{sport}."
+        )
+
+    if any(term in activity for term in ('after', 'post', 'recovery')):
+        tip = (
+            "For recovery, pair it with a familiar carbohydrate food and water "
+            "if those are not already part of the meal."
+        )
+    elif any(term in activity for term in ('before', 'pre', 'practice', 'game', 'training')):
+        tip = (
+            "Before activity, include water and enough familiar food to help them "
+            "begin feeling comfortably fueled."
+        )
+    else:
+        tip = (
+            "Keep water available and ask how their energy feels during the next activity."
+        )
+
+    return f"{observation} {tip}"
+
+
 def generate_ai_feedback(athlete, meal):
     prompt = f"""Athlete: {athlete.name}, age {athlete.age}, sport: {athlete.sport or 'not specified'}
 
@@ -561,16 +1049,17 @@ Focus on how this meal fuels their sport. Give one simple actionable tip.
 No bullet points. No jargon. No emojis. Plain encouraging language."""
 
     try:
-        return groq_completion(
+        response = groq_completion(
             """You are FuelIQ, an AI nutrition coach for youth athletes.
 Use only the supplied athlete, meal, and USDA nutrition data. Frame guidance
 around fueling, energy, and recovery, never weight loss or restriction.
 Do not diagnose conditions or replace a qualified health professional.""",
             prompt,
         )
+        return response or local_meal_feedback(athlete, meal)
     except (requests.RequestException, KeyError, IndexError, TypeError):
         app.logger.exception('Groq meal feedback failed')
-        return None
+        return local_meal_feedback(athlete, meal)
 
 
 def faq_response(message):
@@ -610,11 +1099,16 @@ def faq_response(message):
         )
     if any(term in question for term in ('analytic', 'trend', 'history', 'weekly', '30 day')):
         return (
-            "Analytics and longer-term history are still being built. The current "
-            "Dashboard shows today's meals and totals."
+            "Open Analytics to compare the last 7, 14, or 30 days. It shows logging "
+            "activity, captured energy, macro balance, nutrients, meal timing, and recent meals."
         )
     if any(term in question for term in ('logout', 'log out', 'sign out')):
         return "Select Log out in the top-right navigation."
+    if any(term in question for term in ('forgot password', 'reset password', 'password reset')):
+        return (
+            "On the sign-in page, select Forgot password, enter your account email, "
+            "and follow the time-limited reset link."
+        )
     if any(term in question for term in ('hello', 'hi ', 'hey', 'help', 'what can you do')):
         return (
             "I can guide you through athlete profiles, USDA food search, meal logging, "
@@ -642,8 +1136,10 @@ Current app:
 - Profile edits athlete name, age, sport, training schedule, and dietary notes.
 - Dashboard searches USDA FoodData Central, logs a selected food and servings,
   shows today's meals and nutrient totals, and may provide an AI meal insight.
-- Analytics and historical daily summaries are not available yet.
-- There is no live support agent, password reset, or multi-athlete switcher yet.
+- Analytics compares 7, 14, or 30 days of meal activity, captured nutrients,
+  macro balance, meal timing, and recent foods.
+- Password reset is available from the sign-in page using a one-hour reset link.
+- There is no live support agent or multi-athlete switcher yet.
 
 Never invent features. Do not give medical, diagnostic, or personalized nutrition
 advice. For those requests, explain the limitation and suggest a qualified

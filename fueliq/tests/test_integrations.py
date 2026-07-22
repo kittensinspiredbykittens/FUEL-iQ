@@ -1,4 +1,6 @@
 import os
+import re
+from datetime import date
 
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 os.environ['SECRET_KEY'] = 'test-secret'
@@ -37,7 +39,10 @@ def make_user_and_athlete():
 
 
 def setup_function():
-    fueliq.app.config.update(TESTING=True)
+    fueliq.app.config.update(
+        TESTING=True,
+        DEV_LOGIN_ENABLED=False,
+    )
     with fueliq.app.app_context():
         fueliq.db.drop_all()
         fueliq.db.create_all()
@@ -155,6 +160,149 @@ def test_chatbot_answers_app_guidance_without_an_api_key():
     assert 'USDA search box' in response.get_json()['reply']
 
 
+def test_password_reset_changes_password_and_invalidates_link():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user = fueliq.User(
+            email='parent@example.com',
+            password_hash=fueliq.generate_password_hash('old-password'),
+        )
+        fueliq.db.session.add(user)
+        fueliq.db.session.commit()
+
+    response = client.post('/forgot-password', data={'email': 'parent@example.com'})
+    match = re.search(rb'href="([^"]*/reset-password/[^"]+)"', response.data)
+    assert response.status_code == 200
+    assert match
+
+    reset_path = match.group(1).decode().replace('http://localhost', '')
+    response = client.post(reset_path, data={
+        'password': 'new-password',
+        'confirm_password': 'new-password',
+    })
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/login')
+
+    with fueliq.app.app_context():
+        user = fueliq.User.query.filter_by(email='parent@example.com').one()
+        assert fueliq.check_password_hash(user.password_hash, 'new-password')
+
+    reused = client.get(reset_path, follow_redirects=True)
+    assert b'invalid or has expired' in reused.data
+
+
+def test_password_reset_request_does_not_reveal_unknown_email():
+    client = fueliq.app.test_client()
+    response = client.post('/forgot-password', data={'email': 'missing@example.com'})
+
+    assert response.status_code == 200
+    assert b'If an account matches that email' in response.data
+    assert b'/reset-password/' not in response.data
+
+
+def test_password_reset_requires_eight_character_password():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user = fueliq.User(
+            email='parent@example.com',
+            password_hash=fueliq.generate_password_hash('old-password'),
+        )
+        fueliq.db.session.add(user)
+        fueliq.db.session.commit()
+        token = fueliq.password_reset_token(user)
+
+    response = client.post(f'/reset-password/{token}', data={
+        'password': 'short',
+        'confirm_password': 'short',
+    })
+    assert response.status_code == 200
+    assert b'at least 8 characters' in response.data
+
+
+def test_development_login_is_disabled_by_default():
+    client = fueliq.app.test_client()
+    fueliq.app.config['DEV_LOGIN_ENABLED'] = False
+    assert client.get('/dev-login').status_code == 404
+
+
+def test_development_login_signs_into_first_local_account():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user_id, athlete_id = make_user_and_athlete()
+    fueliq.app.config['DEV_LOGIN_ENABLED'] = True
+
+    response = client.get('/dev-login')
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/dashboard')
+    with client.session_transaction() as active_session:
+        assert active_session['user_id'] == user_id
+        assert active_session['athlete_id'] == athlete_id
+
+
+def test_demo_mode_is_available_as_a_standard_feature():
+    client = fueliq.app.test_client()
+    response = client.get('/demo')
+    assert response.status_code == 302
+    assert '/dashboard?demo_welcome=1' in response.headers['Location']
+
+
+def test_landing_page_always_offers_demo_before_login():
+    client = fueliq.app.test_client()
+    page = client.get('/')
+
+    assert page.status_code == 200
+    assert b'Explore the live demo' in page.data
+    assert b'href="/demo"' in page.data
+    assert b'No login required' in page.data
+
+
+def test_demo_mode_seeds_resets_and_restores_the_previous_account():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user_id, athlete_id = make_user_and_athlete()
+        fueliq.db.session.add(fueliq.Meal(
+            athlete_id=athlete_id,
+            food_name='Real Family Meal',
+            logged_date=date.today().isoformat(),
+        ))
+        fueliq.db.session.commit()
+    login_session(client, user_id, athlete_id)
+    response = client.get('/demo')
+    assert response.status_code == 302
+    assert '/dashboard?demo_welcome=1' in response.headers['Location']
+
+    with client.session_transaction() as active_session:
+        assert active_session['demo_mode'] is True
+        assert active_session['demo_return_user_id'] == user_id
+
+    page = client.get(response.headers['Location'])
+    assert b'Jordan' in page.data
+    assert b'Presentation ready' in page.data
+    assert b'data-tour="meal-logger"' in page.data
+
+    with fueliq.app.app_context():
+        demo_user = fueliq.User.query.filter_by(
+            email=fueliq.app.config['DEMO_ACCOUNT_EMAIL']
+        ).one()
+        demo_athlete = fueliq.Athlete.query.filter_by(user_id=demo_user.id).one()
+        demo_meal_count = fueliq.Meal.query.filter_by(athlete_id=demo_athlete.id).count()
+        assert demo_meal_count >= 40
+        assert fueliq.Meal.query.filter_by(food_name='Real Family Meal').count() == 1
+
+    reset = client.post('/demo/reset')
+    assert reset.status_code == 302
+    with fueliq.app.app_context():
+        assert fueliq.Meal.query.filter_by(athlete_id=demo_athlete.id).count() == demo_meal_count
+
+    exit_response = client.get('/demo/exit')
+    assert exit_response.status_code == 302
+    with client.session_transaction() as active_session:
+        assert active_session['user_id'] == user_id
+        assert active_session['athlete_id'] == athlete_id
+        assert 'demo_mode' not in active_session
+
+
 def test_chatbot_uses_free_groq_fallback_for_unmatched_questions(monkeypatch):
     client = fueliq.app.test_client()
     with fueliq.app.app_context():
@@ -184,6 +332,22 @@ def test_chatbot_uses_free_groq_fallback_for_unmatched_questions(monkeypatch):
     )
 
 
+def test_meal_feedback_uses_local_fallback_when_groq_is_unavailable(monkeypatch):
+    athlete = fueliq.Athlete(name='Sam', sport='Soccer')
+    meal = fueliq.Meal(
+        food_name='Banana, Raw',
+        carbs_g=28.6,
+        protein_g=0.9,
+        training_context='Before practice',
+    )
+    monkeypatch.setattr(fueliq, 'groq_completion', lambda *args, **kwargs: None)
+
+    feedback = fueliq.generate_ai_feedback(athlete, meal)
+
+    assert 'training energy for Soccer' in feedback
+    assert 'Before activity' in feedback
+
+
 def test_fueling_summary_compares_logged_macro_distribution():
     meals = [
         fueliq.Meal(
@@ -205,3 +369,69 @@ def test_fueling_summary_compares_logged_macro_distribution():
     assert summary['percentages']['fat'] == 25.2
     assert summary['goals_met'] == 3
     assert summary['status'] == 'Balanced fueling mix'
+
+
+def test_analytics_builds_daily_history_and_current_streak():
+    meals = [
+        fueliq.Meal(
+            food_name='Oatmeal', logged_date='2026-07-20', meal_time='Breakfast',
+            calories=250, carbs_g=45, protein_g=10, fat_g=4, fiber_g=6,
+        ),
+        fueliq.Meal(
+            food_name='Yogurt', logged_date='2026-07-20', meal_time='Snack',
+            calories=140, carbs_g=18, protein_g=12, fat_g=3, calcium_mg=180,
+        ),
+        fueliq.Meal(
+            food_name='Rice Bowl', logged_date='2026-07-22', meal_time='Lunch',
+            calories=480, carbs_g=70, protein_g=24, fat_g=12, iron_mg=3.2,
+        ),
+    ]
+
+    analytics = fueliq.build_analytics(
+        meals,
+        days=7,
+        anchor_date=date(2026, 7, 22),
+    )
+
+    assert analytics['meal_count'] == 3
+    assert analytics['active_days'] == 2
+    assert analytics['logging_rate'] == 29
+    assert analytics['average_meals'] == 1.5
+    assert analytics['current_streak'] == 1
+    assert analytics['daily'][-1]['calories'] == 480
+    assert analytics['timing_breakdown'][0]['label'] == 'Breakfast'
+    assert analytics['recent_meals'][0].food_name == 'Rice Bowl'
+
+
+def test_analytics_route_scopes_meals_to_current_athlete():
+    client = fueliq.app.test_client()
+    today = date.today().isoformat()
+    with fueliq.app.app_context():
+        user_id, athlete_id = make_user_and_athlete()
+        fueliq.db.session.add(fueliq.Meal(
+            athlete_id=athlete_id,
+            food_name='Visible Oatmeal',
+            logged_date=today,
+            calories=250,
+        ))
+        other_user = fueliq.User(email='other@example.com', password_hash='unused')
+        fueliq.db.session.add(other_user)
+        fueliq.db.session.flush()
+        other_athlete = fueliq.Athlete(user_id=other_user.id, name='Other')
+        fueliq.db.session.add(other_athlete)
+        fueliq.db.session.flush()
+        fueliq.db.session.add(fueliq.Meal(
+            athlete_id=other_athlete.id,
+            food_name='Hidden Meal',
+            logged_date=today,
+            calories=999,
+        ))
+        fueliq.db.session.commit()
+    login_session(client, user_id, athlete_id)
+
+    response = client.get('/analytics?days=14')
+
+    assert response.status_code == 200
+    assert b'Visible Oatmeal' in response.data
+    assert b'Hidden Meal' not in response.data
+    assert b'14 days' in response.data

@@ -60,6 +60,11 @@
         .auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.75rem; }
         .auth-footer { font-size: 13px; color: var(--muted); text-align: center; margin-top: 1rem; }
         .auth-footer a { color: var(--green); text-decoration: none; font-weight: 650; }
+        .auth-action { text-align: right; margin: -.35rem 0 1rem; font-size: 13px; }
+        .auth-action a { color: var(--green); text-decoration: none; font-weight: 650; }
+        .local-reset { margin-top: 1.25rem; padding: 1rem; border: 1px solid #36563b; border-radius: 12px; background: var(--green-soft); }
+        .local-reset strong { display: block; font-size: 13px; color: #baffaa; }
+        .local-reset p { color: var(--muted); font-size: 12px; margin: .2rem 0 .75rem; }
 
         /* Forms */
         .form-group { margin-bottom: 1rem; }
@@ -84,6 +89,32 @@
         .card { background: linear-gradient(145deg, rgba(23,30,24,.98), rgba(15,20,16,.98)); border: 1px solid var(--line); border-radius: 18px; padding: 1.5rem; box-shadow: var(--shadow); }
         .card-title { font-size: 15px; font-weight: 750; margin-bottom: 1.25rem; letter-spacing: -.2px; }
 
+        /* Presentation demo */
+        .demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .65rem max(1.25rem, calc((100vw - 1120px) / 2)); background: linear-gradient(90deg, #143619, #0e2512); border-bottom: 1px solid rgba(121,255,80,.35); color: #dfffd6; }
+        .demo-bar-copy { display: flex; align-items: center; gap: .65rem; min-width: 0; font-size: 12px; }
+        .demo-badge { padding: .25rem .5rem; border-radius: 99px; background: var(--green); color: #071007; font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+        .demo-bar-copy span:last-child { color: #a8c9a9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .demo-actions { display: flex; align-items: center; gap: .4rem; }
+        .demo-action { border: 1px solid rgba(121,255,80,.28); border-radius: 8px; padding: .38rem .62rem; background: rgba(0,0,0,.18); color: #dfffd6; text-decoration: none; font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; white-space: nowrap; }
+        .demo-action.primary { background: var(--green); color: #071007; }
+        .tour-welcome { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 1.25rem; background: rgba(2,5,3,.8); backdrop-filter: blur(8px); }
+        .tour-welcome[hidden], .tour-layer[hidden] { display: none; }
+        .tour-welcome-card { width: min(480px, 100%); padding: 2rem; border: 1px solid rgba(121,255,80,.34); border-radius: 22px; background: linear-gradient(145deg, #172019, #0d120e); box-shadow: 0 30px 80px rgba(0,0,0,.65), var(--glow); }
+        .tour-welcome-card .demo-badge { display: inline-block; margin-bottom: 1rem; }
+        .tour-welcome-card h2 { font-size: 27px; line-height: 1.15; letter-spacing: -.8px; }
+        .tour-welcome-card p { color: var(--muted); margin: .75rem 0 1.3rem; }
+        .tour-welcome-actions { display: flex; gap: .65rem; }
+        .tour-layer { position: fixed; inset: 0; z-index: 1000; pointer-events: none; background: rgba(0,0,0,.68); }
+        .tour-highlight { position: relative !important; z-index: 1001 !important; border-radius: 14px; box-shadow: 0 0 0 4px var(--green), 0 0 0 9999px rgba(0,0,0,.01), 0 18px 60px rgba(0,0,0,.55) !important; }
+        .tour-card { position: fixed; z-index: 1003; width: min(350px, calc(100vw - 28px)); padding: 1rem; border: 1px solid rgba(121,255,80,.4); border-radius: 15px; background: #111812; box-shadow: 0 22px 60px rgba(0,0,0,.65); pointer-events: auto; }
+        .tour-step { color: var(--green); font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+        .tour-card h3 { font-size: 17px; margin: .3rem 0; }
+        .tour-card p { color: #aab6ac; font-size: 12px; line-height: 1.55; }
+        .tour-card-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .9rem; }
+        .tour-card-actions div { display: flex; gap: .4rem; }
+        .tour-button { padding: .43rem .65rem; border-radius: 8px; border: 1px solid #354138; background: #0a0e0b; color: #dce8de; font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; }
+        .tour-button.next { color: #071007; background: var(--green); border-color: var(--green); }
+
         /* App help chatbot */
         .chat-launch { position: fixed; right: 24px; bottom: 24px; z-index: 20; background: linear-gradient(135deg, #83ff59, #52e834); color: #081008; border: 0; border-radius: 99px; padding: 12px 17px; font-weight: 800; cursor: pointer; box-shadow: 0 0 26px rgba(121,255,80,.24), 0 12px 30px rgba(0,0,0,.4); }
         .chat-panel { position: fixed; right: 24px; bottom: 78px; z-index: 20; width: min(360px, calc(100vw - 32px)); height: 470px; display: none; flex-direction: column; background: #101511; border: 1px solid #303a32; border-radius: 14px; overflow: hidden; box-shadow: 0 18px 55px rgba(0,0,0,.55), var(--glow); }
@@ -106,6 +137,9 @@
             .container { padding: 1.5rem 1rem 5rem; }
             .chat-launch { right: 16px; bottom: 16px; }
             .chat-panel { right: 16px; bottom: 70px; }
+            .demo-bar { align-items: flex-start; padding: .65rem 1rem; }
+            .demo-bar-copy span:last-child, .demo-actions form, .demo-actions .exit-label { display: none; }
+            .tour-welcome-actions { flex-direction: column; }
         }
 
         {% block styles %}{% endblock %}
@@ -117,12 +151,24 @@
 <nav>
     <a href="{{ url_for('dashboard') }}" class="brand">Fuel<em>IQ</em></a>
     <div class="nav-links">
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('dashboard') }}" data-tour="nav-dashboard">Dashboard</a>
         <a href="{{ url_for('profile') }}">Profile</a>
-        <a href="{{ url_for('analytics') }}">Analytics</a>
+        <a href="{{ url_for('analytics') }}" data-tour="nav-analytics">Analytics</a>
+        {% if not session.demo_mode %}<a href="{{ url_for('demo_entry') }}">Launch demo</a>{% endif %}
         <a href="{{ url_for('logout') }}">Log out</a>
     </div>
 </nav>
+{% endif %}
+
+{% if session.demo_mode %}
+<aside class="demo-bar" data-tour="demo-banner" aria-label="Presentation demo controls">
+    <div class="demo-bar-copy"><span class="demo-badge">Demo mode</span><span>Preset family dataset · Safe to explore during a presentation</span></div>
+    <div class="demo-actions">
+        <button type="button" class="demo-action primary" id="demo-tour-start">Take guided tour</button>
+        <form action="{{ url_for('demo_reset') }}" method="POST"><button type="submit" class="demo-action">Reset data</button></form>
+        <a href="{{ url_for('demo_exit') }}" class="demo-action"><span class="exit-label">Exit </span>demo</a>
+    </div>
+</aside>
 {% endif %}
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -136,6 +182,142 @@
 {% endwith %}
 
 {% block content %}{% endblock %}
+
+{% if session.demo_mode %}
+<section class="tour-welcome" id="tour-welcome" {% if request.args.get('demo_welcome') != '1' %}hidden{% endif %} aria-modal="true" role="dialog" aria-labelledby="tour-welcome-title">
+    <div class="tour-welcome-card">
+        <span class="demo-badge">Presentation ready</span>
+        <h2 id="tour-welcome-title">Welcome to the FUEL-iQ demo.</h2>
+        <p>Jordan’s two-week soccer fueling history is already loaded. Take the guided tour for a quick product story, or explore the demo freely.</p>
+        <div class="tour-welcome-actions">
+            <button type="button" class="btn btn-green" id="tour-welcome-start">Start the guided tour</button>
+            <button type="button" class="btn btn-dark" id="tour-welcome-skip">Explore on my own</button>
+        </div>
+    </div>
+</section>
+<div class="tour-layer" id="tour-layer" hidden>
+    <aside class="tour-card" id="tour-card" role="dialog" aria-live="polite" aria-label="Product tour">
+        <span class="tour-step" id="tour-step"></span>
+        <h3 id="tour-title"></h3>
+        <p id="tour-copy"></p>
+        <div class="tour-card-actions">
+            <button type="button" class="tour-button" id="tour-close">End tour</button>
+            <div><button type="button" class="tour-button" id="tour-back">Back</button><button type="button" class="tour-button next" id="tour-next">Next</button></div>
+        </div>
+    </aside>
+</div>
+{% endif %}
+
+{% if session.demo_mode %}
+<script>
+(() => {
+    const steps = [
+        {path: '/dashboard', selector: '[data-tour="demo-banner"]', title: 'Presentation-ready mode', copy: 'This isolated demo account contains preset data. Reset it at any time without affecting real families.'},
+        {path: '/dashboard', selector: '[data-tour="dashboard-hero"]', title: 'The parent-first home base', copy: 'The dashboard starts with the athlete, sport, schedule, and a plain-language fueling status.'},
+        {path: '/dashboard', selector: '[data-tour="daily-snapshot"]', title: 'Today at a glance', copy: 'These cards summarize meals logged, energy captured from USDA foods, and the general fueling ranges currently represented.'},
+        {path: '/dashboard', selector: '[data-tour="meal-logger"]', title: 'Verified meal logging', copy: 'Parents search USDA FoodData Central, choose a serving, and add the activity context around the meal.'},
+        {path: '/dashboard', selector: '[data-tour="fueling-balance"]', title: 'Fueling balance, not dieting', copy: 'The macro view explains carbohydrate, protein, and fat as training energy, recovery, and sustained fuel—never as weight-loss targets.'},
+        {path: '/dashboard', selector: '[data-tour="family-insight"]', title: 'A useful family insight', copy: 'FUEL-iQ translates the athlete profile, meal context, and USDA nutrients into one short, parent-friendly observation.'},
+        {path: '/dashboard', selector: '[data-tour="food-story"]', title: 'The daily food story', copy: 'The timeline makes it easy to explain what was eaten, when, and around which training session.'},
+        {path: '/dashboard', selector: '[data-tour="nav-analytics"]', title: 'From today to the bigger picture', copy: 'Analytics turns daily logs into presentation-friendly patterns across 7, 14, or 30 days. Next, we’ll open it.'},
+        {path: '/analytics?days=14', selector: '[data-tour="analytics-hero"]', title: 'The fueling history', copy: 'Use the period selector to move between a quick weekly view and broader two- or four-week patterns.'},
+        {path: '/analytics?days=14', selector: '[data-tour="analytics-kpis"]', title: 'Consistency without judgment', copy: 'Logging frequency, active days, average meals, and streaks show data completeness without grading the child.'},
+        {path: '/analytics?days=14', selector: '[data-tour="daily-activity"]', title: 'Day-by-day activity', copy: 'The chart makes training-day and rest-day patterns visible while keeping the focus on what was actually captured.'},
+        {path: '/analytics?days=14', selector: '[data-tour="macro-history"]', title: 'Macro trends', copy: 'This view aggregates the selected period and compares the captured mix with general youth-athlete reference ranges.'},
+        {path: '/analytics?days=14', selector: '[data-tour="nutrient-history"]', title: 'Nutrients and timing', copy: 'Micronutrient totals and meal timing add useful context for a parent, coach, pediatrician, or sports dietitian.'},
+        {path: '/analytics?days=14', selector: '[data-tour="recent-foods"]', title: 'A clear audit trail', copy: 'Recent foods connect every chart back to the specific USDA foods that created it. That completes the demo tour.'}
+    ];
+    const storageKey = 'fueliq-demo-tour-step';
+    const welcome = document.getElementById('tour-welcome');
+    const layer = document.getElementById('tour-layer');
+    const card = document.getElementById('tour-card');
+    const stepLabel = document.getElementById('tour-step');
+    const title = document.getElementById('tour-title');
+    const copy = document.getElementById('tour-copy');
+    const next = document.getElementById('tour-next');
+    const back = document.getElementById('tour-back');
+    let activeTarget = null;
+    let stepIndex = 0;
+
+    function cleanWelcomeUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('demo_welcome');
+        window.history.replaceState({}, '', url.pathname + url.search);
+    }
+
+    function clearHighlight() {
+        if (activeTarget) activeTarget.classList.remove('tour-highlight');
+        activeTarget = null;
+    }
+
+    function endTour() {
+        clearHighlight();
+        layer.hidden = true;
+        localStorage.removeItem(storageKey);
+    }
+
+    function positionCard(target) {
+        const rect = target.getBoundingClientRect();
+        const width = Math.min(350, window.innerWidth - 28);
+        const left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left + (rect.width - width) / 2));
+        const roomBelow = window.innerHeight - rect.bottom;
+        card.style.width = `${width}px`;
+        card.style.left = `${left}px`;
+        card.style.top = roomBelow > 270 ? `${Math.min(window.innerHeight - 230, rect.bottom + 14)}px` : `${Math.max(14, rect.top - 230)}px`;
+    }
+
+    function showStep(index) {
+        if (index < 0 || index >= steps.length) return endTour();
+        stepIndex = index;
+        localStorage.setItem(storageKey, String(stepIndex));
+        const step = steps[stepIndex];
+        const targetPath = new URL(step.path, window.location.origin).pathname;
+        if (window.location.pathname !== targetPath) {
+            const separator = step.path.includes('?') ? '&' : '?';
+            window.location.href = `${step.path}${separator}tour=1`;
+            return;
+        }
+
+        clearHighlight();
+        const target = document.querySelector(step.selector);
+        if (!target) {
+            showStep(stepIndex + 1);
+            return;
+        }
+        welcome.hidden = true;
+        layer.hidden = false;
+        activeTarget = target;
+        target.classList.add('tour-highlight');
+        target.scrollIntoView({behavior: 'smooth', block: 'center'});
+        stepLabel.textContent = `Step ${stepIndex + 1} of ${steps.length}`;
+        title.textContent = step.title;
+        copy.textContent = step.copy;
+        back.disabled = stepIndex === 0;
+        next.textContent = stepIndex === steps.length - 1 ? 'Finish' : 'Next';
+        window.setTimeout(() => positionCard(target), 220);
+    }
+
+    function startTour() {
+        cleanWelcomeUrl();
+        showStep(0);
+    }
+
+    document.getElementById('demo-tour-start').addEventListener('click', startTour);
+    document.getElementById('tour-welcome-start').addEventListener('click', startTour);
+    document.getElementById('tour-welcome-skip').addEventListener('click', () => { welcome.hidden = true; cleanWelcomeUrl(); });
+    document.getElementById('tour-close').addEventListener('click', endTour);
+    next.addEventListener('click', () => showStep(stepIndex + 1));
+    back.addEventListener('click', () => showStep(stepIndex - 1));
+    window.addEventListener('resize', () => { if (activeTarget) positionCard(activeTarget); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') endTour(); });
+
+    const savedStep = localStorage.getItem(storageKey);
+    if (savedStep !== null && new URLSearchParams(window.location.search).get('tour') === '1') {
+        showStep(Number(savedStep) || 0);
+    }
+})();
+</script>
+{% endif %}
 
 {% if session.user_id %}
 <button type="button" class="chat-launch" id="chat-launch" aria-controls="chat-panel" aria-expanded="false">Need help?</button>
