@@ -40,6 +40,9 @@ USDA_API_KEY = os.getenv('USDA_API_KEY', 'DEMO_KEY')
 GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions'
 GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.1-8b-instant')
 
+PROFILE_AVATARS = {'⚡', '⚽', '🏀', '🏊', '🏃', '🚴', '🏈', '⭐'}
+PROFILE_COLORS = {'lime', 'aqua', 'purple', 'orange', 'pink', 'blue'}
+
 # ── Models ────────────────────────────────────────────────────────────────────
 
 class User(db.Model):
@@ -56,6 +59,10 @@ class Athlete(db.Model):
     sport             = db.Column(db.String(100))
     training_schedule = db.Column(db.String(255))
     dietary_notes     = db.Column(db.Text)
+    avatar            = db.Column(db.String(16), default='⚡')
+    theme_color       = db.Column(db.String(20), default='lime')
+    favorite_fuel     = db.Column(db.String(100))
+    fueling_goal      = db.Column(db.String(255))
     meals             = db.relationship('Meal', backref='athlete', lazy=True, cascade='all, delete-orphan')
 
 class Meal(db.Model):
@@ -98,9 +105,25 @@ def ensure_meal_columns():
     db.session.commit()
 
 
+def ensure_athlete_columns():
+    """Add profile customization fields for existing local databases."""
+    columns = {column['name'] for column in inspect(db.engine).get_columns('athlete')}
+    additions = {
+        'avatar': 'VARCHAR(16)',
+        'theme_color': 'VARCHAR(20)',
+        'favorite_fuel': 'VARCHAR(100)',
+        'fueling_goal': 'VARCHAR(255)',
+    }
+    for name, column_type in additions.items():
+        if name not in columns:
+            db.session.execute(text(f'ALTER TABLE athlete ADD COLUMN {name} {column_type}'))
+    db.session.commit()
+
+
 with app.app_context():
     db.create_all()
     ensure_meal_columns()
+    ensure_athlete_columns()
 
 # ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -108,7 +131,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated
 
@@ -615,8 +638,6 @@ def build_analytics(meals, days=7, anchor_date=None):
 
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
 
@@ -729,7 +750,7 @@ def demo_exit():
         if return_athlete and return_athlete.user_id == return_user.id:
             session['athlete_id'] = return_athlete.id
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -787,37 +808,61 @@ def reset_password(token):
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('login'))
+    return redirect(url_for('index'))
 
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    user    = User.query.get(session['user_id'])
+    user    = db.session.get(User, session['user_id'])
     athlete = current_athlete()
 
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         age  = request.form.get('age', '').strip()
+        avatar = request.form.get('avatar', '⚡')
+        theme_color = request.form.get('theme_color', 'lime')
 
         if not name:
             flash('Athlete name is required.', 'danger')
             return render_template('profile.html', athlete=athlete)
 
+        try:
+            parsed_age = int(age) if age else None
+        except ValueError:
+            parsed_age = None
+
+        if parsed_age is not None and not 4 <= parsed_age <= 21:
+            flash('Choose an age from 4 to 21.', 'danger')
+            return render_template('profile.html', athlete=athlete)
+
+        if avatar not in PROFILE_AVATARS:
+            avatar = '⚡'
+        if theme_color not in PROFILE_COLORS:
+            theme_color = 'lime'
+
         if athlete:
             athlete.name              = name
-            athlete.age               = int(age) if age else None
+            athlete.age               = parsed_age
             athlete.sport             = request.form.get('sport', '').strip()
             athlete.training_schedule = request.form.get('training_schedule', '').strip()
             athlete.dietary_notes     = request.form.get('dietary_notes', '').strip()
+            athlete.avatar            = avatar
+            athlete.theme_color       = theme_color
+            athlete.favorite_fuel     = request.form.get('favorite_fuel', '').strip()[:100]
+            athlete.fueling_goal      = request.form.get('fueling_goal', '').strip()[:255]
         else:
             athlete = Athlete(
                 user_id=user.id,
                 name=name,
-                age=int(age) if age else None,
+                age=parsed_age,
                 sport=request.form.get('sport', '').strip(),
                 training_schedule=request.form.get('training_schedule', '').strip(),
-                dietary_notes=request.form.get('dietary_notes', '').strip()
+                dietary_notes=request.form.get('dietary_notes', '').strip(),
+                avatar=avatar,
+                theme_color=theme_color,
+                favorite_fuel=request.form.get('favorite_fuel', '').strip()[:100],
+                fueling_goal=request.form.get('fueling_goal', '').strip()[:255],
             )
             db.session.add(athlete)
 

@@ -6,9 +6,16 @@
 .eyebrow { color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 7px; }
 .dashboard-hero h1 { max-width: 700px; font-size: clamp(26px, 4vw, 40px); line-height: 1.12; letter-spacing: -1.5px; }
 .hero-sub { color: var(--muted); font-size: 14px; margin-top: 9px; }
-.athlete-card { min-width: 190px; padding: 14px 16px; border: 1px solid rgba(121,255,80,.25); border-radius: 16px; background: rgba(121,255,80,.08); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), var(--glow); }
+.athlete-card { --player-color: #79ff50; min-width: 215px; display: grid; grid-template-columns: 45px 1fr; align-items: center; gap: 11px; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--player-color), transparent 66%); border-radius: 16px; background: color-mix(in srgb, var(--player-color), transparent 92%); box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 0 25px color-mix(in srgb, var(--player-color), transparent 88%); }
+.athlete-card.theme-aqua { --player-color: #2fe0bb; }
+.athlete-card.theme-purple { --player-color: #a78bfa; }
+.athlete-card.theme-orange { --player-color: #ff9f43; }
+.athlete-card.theme-pink { --player-color: #ff72b6; }
+.athlete-card.theme-blue { --player-color: #5aa9ff; }
+.athlete-avatar { width: 45px; height: 45px; display: grid; place-items: center; border: 1px solid var(--player-color); border-radius: 13px; background: color-mix(in srgb, var(--player-color), transparent 86%); font-size: 23px; }
 .athlete-card strong { display: block; font-size: 15px; }
-.athlete-card span { color: #a8b7aa; font-size: 12px; }
+.athlete-card span { display: block; color: #a8b7aa; font-size: 11px; }
+.athlete-card .player-goal { color: var(--player-color); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .snapshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.25rem; }
 .snapshot { position: relative; overflow: hidden; background: linear-gradient(145deg, #171e18, #101511); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: 0 14px 34px rgba(0,0,0,.24); }
@@ -116,9 +123,13 @@
       <h1>Help {{ athlete.name }} feel ready for what’s next.</h1>
       <p class="hero-sub">{{ today }} · {{ athlete.sport or 'Sport not set' }} · {{ athlete.training_schedule or 'Add a training schedule in Profile' }}</p>
     </div>
-    <div class="athlete-card">
-      <strong>{{ athlete.name }}, age {{ athlete.age or '—' }}</strong>
-      <span>{{ fueling.status }}</span>
+    <div class="athlete-card theme-{{ athlete.theme_color or 'lime' }}">
+      <div class="athlete-avatar" aria-hidden="true">{{ athlete.avatar or '⚡' }}</div>
+      <div>
+        <strong>{{ athlete.name }}, age {{ athlete.age or '—' }}</strong>
+        <span>{{ fueling.status }}</span>
+        {% if athlete.fueling_goal %}<span class="player-goal">Goal: {{ athlete.fueling_goal }}</span>{% endif %}
+      </div>
     </div>
   </header>
 

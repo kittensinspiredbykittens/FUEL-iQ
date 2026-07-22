@@ -1,45 +1,130 @@
 {% extends "base.html" %}
-{% block title %}Athlete Profile — FuelIQ{% endblock %}
+{% block title %}Build Your Player Card — FuelIQ{% endblock %}
 {% block styles %}
-.profile-wrap { max-width: 540px; margin: 0 auto; }
-.profile-wrap h1 { font-size: 21px; font-weight: 700; margin-bottom: 0.2rem; }
-.profile-wrap .sub { font-size: 14px; color: var(--muted); margin-bottom: 1.75rem; }
+.profile-wrap { max-width: 940px; margin: 0 auto; }
+.profile-heading { text-align: center; margin-bottom: 1.5rem; }
+.profile-kicker { color: var(--green); font-size: 11px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+.profile-heading h1 { font-size: clamp(28px, 5vw, 43px); line-height: 1.1; letter-spacing: -1.5px; margin-top: .3rem; }
+.profile-heading .sub { max-width: 600px; margin: .65rem auto 0; color: var(--muted); font-size: 14px; }
+.profile-grid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.player-preview { --player-color: #79ff50; position: sticky; top: 84px; padding: 1.25rem; border: 1px solid color-mix(in srgb, var(--player-color), transparent 62%); border-radius: 24px; background: radial-gradient(circle at 50% 5%, color-mix(in srgb, var(--player-color), transparent 72%), transparent 48%), #101511; box-shadow: 0 20px 55px rgba(0,0,0,.42), 0 0 32px color-mix(in srgb, var(--player-color), transparent 86%); text-align: center; overflow: hidden; }
+.player-preview::before { content: "MY PLAYER CARD"; display: block; color: var(--player-color); font-size: 9px; font-weight: 950; letter-spacing: .16em; }
+.preview-avatar { width: 112px; height: 112px; display: grid; place-items: center; margin: 1.1rem auto .85rem; border: 3px solid var(--player-color); border-radius: 34px; background: color-mix(in srgb, var(--player-color), #111 78%); font-size: 54px; transform: rotate(-3deg); box-shadow: 0 12px 30px color-mix(in srgb, var(--player-color), transparent 78%); }
+.player-preview h2 { font-size: 23px; line-height: 1.15; overflow-wrap: anywhere; }
+.preview-sport { color: #aeb9b0; font-size: 12px; margin-top: .35rem; }
+.preview-goal { margin-top: 1rem; padding: .8rem; border-radius: 14px; background: color-mix(in srgb, var(--player-color), transparent 90%); color: #dce7de; font-size: 11px; line-height: 1.5; }
+.preview-goal strong { display: block; color: var(--player-color); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.profile-form { padding: 1.45rem; }
+.section { padding-bottom: 1.45rem; margin-bottom: 1.45rem; border-bottom: 1px solid var(--line); }
+.section:last-of-type { border-bottom: 0; margin-bottom: .35rem; }
+.section-head { display: flex; gap: .8rem; align-items: flex-start; margin-bottom: 1rem; }
+.step-bubble { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 900; }
+.section-head h2 { font-size: 16px; line-height: 1.25; }
+.section-head p { color: var(--muted); font-size: 11px; margin-top: 2px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.profile-wrap .card { position: relative; overflow: hidden; }
-.profile-wrap .card::before { content: ""; position: absolute; top: 0; left: 28px; right: 28px; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); box-shadow: 0 0 18px rgba(121,255,80,.45); }
+.choice-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: .55rem; }
+.choice { position: relative; cursor: pointer; }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.avatar-choice span { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid #344037; border-radius: 14px; background: #0c110d; font-size: 26px; transition: .16s ease; }
+.avatar-choice input:checked + span { border-color: var(--green); background: var(--green-soft); box-shadow: 0 0 0 3px rgba(121,255,80,.1); transform: translateY(-2px); }
+.avatar-choice input:focus-visible + span, .color-choice input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
+.color-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: .65rem; }
+.color-choice span { display: block; height: 38px; border: 2px solid #101511; border-radius: 12px; background: var(--swatch); box-shadow: 0 0 0 1px #354037; transition: .16s ease; }
+.color-choice input:checked + span { box-shadow: 0 0 0 3px #101511, 0 0 0 5px var(--swatch); transform: scale(.94); }
+.field-hint { color: #738078; font-size: 10px; margin-top: 5px; }
+.save-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.save-note { color: var(--muted); font-size: 11px; }
+@media (max-width: 760px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .player-preview { position: relative; top: 0; }
+  .preview-avatar { width: 88px; height: 88px; font-size: 42px; margin: .8rem auto .6rem; }
+  .choice-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 480px) {
+  .two-col { grid-template-columns: 1fr; }
+  .save-row { align-items: stretch; flex-direction: column; }
+  .save-row .btn { width: 100%; }
+}
 {% endblock %}
 {% block content %}
-<div class="container">
+{% set selected_avatar = athlete.avatar if athlete and athlete.avatar else '⚡' %}
+{% set selected_color = athlete.theme_color if athlete and athlete.theme_color else 'lime' %}
+<main class="container">
   <div class="profile-wrap">
-    <h1>{{ 'Edit profile' if athlete else 'Set up athlete profile' }}</h1>
-    <p class="sub">{{ 'Update ' + athlete.name + "'s info." if athlete else "Tell us about the athlete you're tracking." }}</p>
-    <div class="card">
-      <form method="POST">
-        <div class="two-col">
-          <div class="form-group">
-            <label>Athlete name</label>
-            <input type="text" name="name" required value="{{ athlete.name if athlete else '' }}" placeholder="First name">
+    <header class="profile-heading">
+      <div class="profile-kicker">Make it yours</div>
+      <h1>Build your player card</h1>
+      <p class="sub">Pick a look, share what helps you feel strong, and tell FuelIQ a little about your game.</p>
+    </header>
+
+    <div class="profile-grid">
+      <aside class="player-preview" id="player-preview" data-color="{{ selected_color }}" aria-label="Player card preview">
+        <div class="preview-avatar" id="preview-avatar">{{ selected_avatar }}</div>
+        <h2 id="preview-name">{{ athlete.name if athlete else 'Your name' }}</h2>
+        <p class="preview-sport" id="preview-sport">{{ athlete.sport if athlete and athlete.sport else 'Your sport' }}</p>
+        <div class="preview-goal"><strong>My power-up goal</strong><span id="preview-goal">{{ athlete.fueling_goal if athlete and athlete.fueling_goal else 'Feel ready to play!' }}</span></div>
+      </aside>
+
+      <form method="POST" class="card profile-form">
+        <section class="section">
+          <div class="section-head"><span class="step-bubble">1</span><div><h2>Pick your player icon</h2><p>Choose the one that feels most like you.</p></div></div>
+          <div class="choice-grid" role="radiogroup" aria-label="Player icon">
+            {% for icon, label in [('⚡','Lightning'),('⚽','Soccer'),('🏀','Basketball'),('🏊','Swimming'),('🏃','Running'),('🚴','Cycling'),('🏈','Football'),('⭐','Star')] %}
+            <label class="choice avatar-choice" title="{{ label }}"><input type="radio" name="avatar" value="{{ icon }}" {% if selected_avatar == icon %}checked{% endif %}><span aria-hidden="true">{{ icon }}</span></label>
+            {% endfor %}
           </div>
-          <div class="form-group">
-            <label>Age</label>
-            <input type="number" name="age" min="4" max="21" value="{{ athlete.age if athlete else '' }}" placeholder="e.g. 13">
+        </section>
+
+        <section class="section">
+          <div class="section-head"><span class="step-bubble">2</span><div><h2>Choose your team color</h2><p>This color follows your player card onto the dashboard.</p></div></div>
+          <div class="color-grid" role="radiogroup" aria-label="Team color">
+            {% for color, hex in [('lime','#79ff50'),('aqua','#2fe0bb'),('purple','#a78bfa'),('orange','#ff9f43'),('pink','#ff72b6'),('blue','#5aa9ff')] %}
+            <label class="choice color-choice" title="{{ color | title }}"><input type="radio" name="theme_color" value="{{ color }}" {% if selected_color == color %}checked{% endif %}><span style="--swatch:{{ hex }}" aria-hidden="true"></span></label>
+            {% endfor %}
           </div>
-        </div>
-        <div class="form-group">
-          <label>Sport</label>
-          <input type="text" name="sport" value="{{ athlete.sport if athlete else '' }}" placeholder="e.g. Soccer, Swimming, Golf">
-        </div>
-        <div class="form-group">
-          <label>Training schedule</label>
-          <input type="text" name="training_schedule" value="{{ athlete.training_schedule if athlete else '' }}" placeholder="e.g. 5 days/week, 90-min practices">
-        </div>
-        <div class="form-group">
-          <label>Dietary notes or allergies</label>
-          <textarea name="dietary_notes" placeholder="e.g. No nuts, vegetarian, skips breakfast">{{ athlete.dietary_notes if athlete else '' }}</textarea>
-        </div>
-        <button type="submit" class="btn btn-green">{{ 'Save changes' if athlete else 'Save and continue →' }}</button>
+        </section>
+
+        <section class="section">
+          <div class="section-head"><span class="step-bubble">3</span><div><h2>Tell us about you</h2><p>A grown-up can help with the schedule and allergy details.</p></div></div>
+          <div class="two-col">
+            <div class="form-group"><label for="name">What should we call you?</label><input id="name" type="text" name="name" maxlength="100" required value="{{ athlete.name if athlete else '' }}" placeholder="Your first name"></div>
+            <div class="form-group"><label for="age">How old are you?</label><input id="age" type="number" name="age" min="4" max="21" value="{{ athlete.age if athlete else '' }}" placeholder="e.g. 13"></div>
+          </div>
+          <div class="form-group"><label for="sport">What sport or activity do you love?</label><input id="sport" type="text" name="sport" maxlength="100" value="{{ athlete.sport if athlete else '' }}" placeholder="Soccer, dance, swimming, skateboarding..."></div>
+          <div class="form-group"><label for="training_schedule">When do you practice or play?</label><input id="training_schedule" type="text" name="training_schedule" maxlength="255" value="{{ athlete.training_schedule if athlete else '' }}" placeholder="Tuesday and Thursday after school"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head"><span class="step-bubble">4</span><div><h2>Add your power-ups</h2><p>There are no “good” or “bad” foods here—just foods that help your body do different jobs.</p></div></div>
+          <div class="form-group"><label for="fueling_goal">What do you want fuel to help you do?</label><input id="fueling_goal" type="text" name="fueling_goal" maxlength="255" value="{{ athlete.fueling_goal if athlete else '' }}" placeholder="Have energy for the whole game"></div>
+          <div class="form-group"><label for="favorite_fuel">What food or snack makes you smile?</label><input id="favorite_fuel" type="text" name="favorite_fuel" maxlength="100" value="{{ athlete.favorite_fuel if athlete else '' }}" placeholder="Strawberry smoothie, tacos, trail mix..."></div>
+          <div class="form-group"><label for="dietary_notes">Allergies or food notes <span class="field-hint">(grown-up check)</span></label><textarea id="dietary_notes" name="dietary_notes" maxlength="1000" placeholder="Foods to avoid, allergies, or family food choices">{{ athlete.dietary_notes if athlete else '' }}</textarea><p class="field-hint">This helps personalize the experience but does not replace advice from a doctor or dietitian.</p></div>
+        </section>
+
+        <div class="save-row"><span class="save-note">You can change your card anytime.</span><button type="submit" class="btn btn-green">{{ 'Save my player card' if athlete else 'Create my player card →' }}</button></div>
       </form>
     </div>
   </div>
-</div>
+</main>
+<script>
+(() => {
+  const colors = {lime:'#79ff50', aqua:'#2fe0bb', purple:'#a78bfa', orange:'#ff9f43', pink:'#ff72b6', blue:'#5aa9ff'};
+  const preview = document.getElementById('player-preview');
+  const avatar = document.getElementById('preview-avatar');
+  const name = document.getElementById('preview-name');
+  const sport = document.getElementById('preview-sport');
+  const goal = document.getElementById('preview-goal');
+  function update() {
+    const selectedAvatar = document.querySelector('input[name="avatar"]:checked');
+    const selectedColor = document.querySelector('input[name="theme_color"]:checked');
+    avatar.textContent = selectedAvatar ? selectedAvatar.value : '⚡';
+    preview.style.setProperty('--player-color', colors[selectedColor ? selectedColor.value : 'lime']);
+    name.textContent = document.getElementById('name').value.trim() || 'Your name';
+    sport.textContent = document.getElementById('sport').value.trim() || 'Your sport';
+    goal.textContent = document.getElementById('fueling_goal').value.trim() || 'Feel ready to play!';
+  }
+  document.querySelectorAll('input').forEach(input => input.addEventListener('input', update));
+  update();
+})();
+</script>
 {% endblock %}

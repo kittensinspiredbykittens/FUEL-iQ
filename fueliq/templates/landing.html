@@ -117,19 +117,6 @@
             transition: border-color 0.15s;
         }
         .btn-secondary:hover { border-color: #666; }
-        .btn-demo {
-            background: var(--green-light);
-            color: #07130a;
-            font-size: 15px;
-            font-weight: 750;
-            padding: 13px 28px;
-            border-radius: 9px;
-            text-decoration: none;
-            box-shadow: 0 12px 30px rgba(74,222,128,.2);
-        }
-        .demo-note { display: flex; justify-content: center; align-items: center; gap: .5rem; color: #7f8c82; font-size: 12px; margin-top: 1rem; }
-        .demo-note i { width: 6px; height: 6px; border-radius: 50%; background: var(--green-light); box-shadow: 0 0 9px var(--green-light); }
-
         /* ── Section wrapper ── */
         .section { padding: 5rem 2rem; }
         .section-inner { max-width: 900px; margin: 0 auto; }
@@ -276,8 +263,12 @@
 <nav>
     <a href="/" class="brand">Fuel<em>IQ</em></a>
     <div class="nav-actions">
-        <a href="{{ url_for('demo_entry') }}" class="nav-demo">Live demo</a>
-        <a href="/register" class="nav-cta">Get started free</a>
+        {% if session.user_id %}
+        <a href="{{ url_for('dashboard') }}" class="nav-cta">Continue app</a>
+        {% else %}
+        <a href="{{ url_for('register') }}" class="nav-cta">Get started free</a>
+        {% endif %}
+        <a href="{{ url_for('demo_entry') }}" class="nav-demo">View demo</a>
     </div>
 </nav>
 
@@ -287,11 +278,14 @@
     <h1>Fuel Athletes <em>Smarter.</em></h1>
     <p>FuelIQ helps parents make sure their youth athletes are getting the nutrients they need to grow and develop.</p>
     <div class="hero-btns">
-        <a href="{{ url_for('demo_entry') }}" class="btn-demo">Explore the live demo →</a>
+        {% if session.user_id %}
+        <a href="{{ url_for('dashboard') }}" class="btn-primary">Continue to dashboard →</a>
+        {% else %}
         <a href="/register" class="btn-primary">Get started free →</a>
         <a href="/login" class="btn-secondary">Sign in</a>
+        {% endif %}
+            <a href="{{ url_for('demo_entry') }}" class="btn-secondary">Demo</a>
     </div>
-    <div class="demo-note"><i></i>No login required · Preset data · Optional guided tour</div>
 </section>
 
 <!-- Problem -->

@@ -98,7 +98,23 @@ def test_food_search_requires_login():
     client = fueliq.app.test_client()
     response = client.get('/api/foods/search?q=banana')
     assert response.status_code == 302
-    assert '/login' in response.headers['Location']
+    assert response.headers['Location'].endswith('/')
+
+
+def test_logout_and_protected_pages_return_to_main_options():
+    client = fueliq.app.test_client()
+
+    protected = client.get('/dashboard')
+    assert protected.status_code == 302
+    assert protected.headers['Location'].endswith('/')
+
+    logout = client.get('/logout')
+    assert logout.status_code == 302
+    assert logout.headers['Location'].endswith('/')
+
+    landing = client.get(logout.headers['Location'])
+    assert b'Get started free' in landing.data
+    assert b'>Demo</a>' in landing.data
 
 
 def test_food_search_returns_nutrients_for_usda_serving(monkeypatch):
@@ -247,14 +263,66 @@ def test_demo_mode_is_available_as_a_standard_feature():
     assert '/dashboard?demo_welcome=1' in response.headers['Location']
 
 
-def test_landing_page_always_offers_demo_before_login():
+def test_landing_page_offers_demo_as_an_optional_secondary_choice():
     client = fueliq.app.test_client()
     page = client.get('/')
 
     assert page.status_code == 200
-    assert b'Explore the live demo' in page.data
+    assert b'>Demo</a>' in page.data
     assert b'href="/demo"' in page.data
-    assert b'No login required' in page.data
+    assert page.data.index(b'Get started free') < page.data.index(b'>Demo</a>')
+
+
+def test_landing_page_remains_the_entry_screen_when_signed_in():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user_id, athlete_id = make_user_and_athlete()
+    login_session(client, user_id, athlete_id)
+
+    page = client.get('/')
+
+    assert page.status_code == 200
+    assert b'Continue to dashboard' in page.data
+    assert b'>Demo</a>' in page.data
+
+
+def test_kid_friendly_profile_customization_is_saved_and_shown():
+    client = fueliq.app.test_client()
+    with fueliq.app.app_context():
+        user_id, athlete_id = make_user_and_athlete()
+    login_session(client, user_id, athlete_id)
+
+    profile = client.get('/profile')
+    assert profile.status_code == 200
+    assert b'Build your player card' in profile.data
+    assert b'name="avatar"' in profile.data
+    assert b'name="theme_color"' in profile.data
+
+    response = client.post('/profile', data={
+        'name': 'Sam',
+        'age': '14',
+        'sport': 'Soccer',
+        'training_schedule': 'Tuesday and Thursday',
+        'dietary_notes': 'No peanuts',
+        'avatar': '⚽',
+        'theme_color': 'purple',
+        'favorite_fuel': 'Strawberry smoothie',
+        'fueling_goal': 'Have energy for the whole game',
+    })
+
+    assert response.status_code == 302
+    assert response.headers['Location'].endswith('/dashboard')
+    with fueliq.app.app_context():
+        athlete = fueliq.db.session.get(fueliq.Athlete, athlete_id)
+        assert athlete.avatar == '⚽'
+        assert athlete.theme_color == 'purple'
+        assert athlete.favorite_fuel == 'Strawberry smoothie'
+        assert athlete.fueling_goal == 'Have energy for the whole game'
+
+    dashboard = client.get('/dashboard')
+    assert '⚽'.encode() in dashboard.data
+    assert b'theme-purple' in dashboard.data
+    assert b'Have energy for the whole game' in dashboard.data
 
 
 def test_demo_mode_seeds_resets_and_restores_the_previous_account():
